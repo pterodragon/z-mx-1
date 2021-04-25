@@ -258,6 +258,14 @@ private:
   SyncFn	m_syncFn = nullptr;
 };
 
+template <typename T>
+const ZvVFieldArray fields() {
+  template <typename Field>
+  struct Filter { enum { OK = (Field::Flags & ZvFieldFlags::Series) }; };
+  using Fields = typename ZuTypeGrep<Filter, ZvFields<T>>::T;
+  return ZvMkVFields<Fields>();
+}
+
 class ZdfAPI DataFrame {
   DataFrame() = delete;
   DataFrame(const DataFrame &) = delete;
@@ -267,7 +275,7 @@ class ZdfAPI DataFrame {
 public:
   ~DataFrame() = default;
 
-  DataFrame(ZvFieldArray fields, ZuString name, bool timeIndex = false);
+  DataFrame(ZvVFieldArray fields, ZuString name, bool timeIndex = false);
 
   const ZtString &name() const { return m_name; }
   const ZmTime &epoch() const { return m_epoch; }
@@ -301,22 +309,21 @@ public:
       for (unsigned i = 0; i < n; i++) {
 	auto field = m_df->field(i);
 	if (i || field) {
-	  // FIXME - switch on field->type, handle Fixed, Float, Decimal
+	  unsigned exponent = field->info.exponent;
 	  switch (field->type) {
-	    case ZvFieldType::Time:
-	      v = m_df->nsecs(field->u.time(ptr));
-	      break;
 	    case ZvFieldType::Int:
-	      v = field->get.int_(ptr);
+	    case ZvFieldType::Fixed:
+	    case ZvFieldType::Enum:
+	      v = {field->getFn.int_(ptr), exponent};
 	      break;
 	    case ZvFieldType::Float:
-	      v = field->get.float_(ptr);
-	      break;
-	    case ZvFieldType::Fixed:
-	      v = field->get.fixed(ptr);
+	      v = {field->getFn.float_(ptr), exponent};
 	      break;
 	    case ZvFieldType::Decimal:
-	      v = field->get.decimal(ptr);
+	      v = {field->getFn.decimal(ptr).adjust(exponent), exponent};
+	      break;
+	    case ZvFieldType::Time:
+	      v = m_df->nsecs(field->getFn.time(ptr));
 	      break;
 	  }
 	} else
@@ -391,7 +398,7 @@ private:
 private:
   ZtString			m_name;
   ZtArray<ZuPtr<Series>>	m_series;
-  ZtArray<const ZvField *>	m_fields;
+  ZtArray<const ZvVField *>	m_fields;
   Mgr				*m_mgr = nullptr;
   ZmTime			m_epoch;
 };

@@ -108,7 +108,7 @@ namespace ZuFmt {
 
 // run-time variable formatting
 struct ZuVFmt {
-  ZuInline ZuVFmt() :
+  ZuVFmt() :
     m_justification(ZuFmt::Just::None),
     m_hex(0), m_upper(0), m_alt(0),
     m_comma('\0'),
@@ -116,7 +116,7 @@ struct ZuVFmt {
     m_ndp(-ZuFmt::MaxNDP), m_trim('\0') { }
 
   // initializers
-  ZuInline ZuVFmt &reset() {
+  ZuVFmt &reset() {
     using namespace ZuFmt;
     m_justification = Just::None;
     m_hex = 0; m_upper = 0; m_alt = 0;
@@ -125,55 +125,55 @@ struct ZuVFmt {
     m_ndp = -ZuFmt::MaxNDP; m_trim = '\0';
     return *this;
   }
-  ZuInline ZuVFmt &left(unsigned width, char pad = '\0') {
+  ZuVFmt &left(unsigned width, char pad = '\0') {
     using namespace ZuFmt;
     m_justification = Just::Left;
     m_width = ZuUnlikely(width > MaxWidth) ? MaxWidth : width;
     m_pad = pad;
     return *this;
   }
-  ZuInline ZuVFmt &right(unsigned width, char pad = '0') {
+  ZuVFmt &right(unsigned width, char pad = '0') {
     using namespace ZuFmt;
     m_justification = Just::Right;
     m_width = ZuUnlikely(width > MaxWidth) ? MaxWidth : width;
     m_pad = pad;
     return *this;
   }
-  ZuInline ZuVFmt &frac(unsigned ndp, char trim = '\0') {
+  ZuVFmt &frac(unsigned ndp, char trim = '\0') {
     using namespace ZuFmt;
     m_justification = Just::Frac;
     m_ndp = ZuUnlikely(ndp > MaxNDP) ? MaxNDP : ndp;
     m_trim = trim;
     return *this;
   }
-  ZuInline ZuVFmt &hex() {
+  ZuVFmt &hex() {
     m_hex = 1;
     m_upper = 0;
     return *this;
   }
-  ZuInline ZuVFmt &hex(bool upper) {
+  ZuVFmt &hex(bool upper) {
     m_hex = 1;
     m_upper = upper;
     return *this;
   }
-  ZuInline ZuVFmt &hex(bool hex_, bool upper) {
+  ZuVFmt &hex(bool hex_, bool upper) {
     m_hex = hex_;
     m_upper = upper;
     return *this;
   }
-  ZuInline ZuVFmt &comma(char comma_ = ',') {
+  ZuVFmt &comma(char comma_ = ',') {
     m_comma = comma_;
     return *this;
   }
-  ZuInline ZuVFmt &alt() {
+  ZuVFmt &alt() {
     m_alt = 1;
     return *this;
   }
-  ZuInline ZuVFmt &alt(bool alt_) {
+  ZuVFmt &alt(bool alt_) {
     m_alt = alt_;
     return *this;
   }
-  ZuInline ZuVFmt &fp(int ndp = -ZuFmt::MaxNDP, char trim = '\0') {
+  ZuVFmt &fp(int ndp = -ZuFmt::MaxNDP, char trim = '\0') {
     using namespace ZuFmt;
     m_ndp =
       ZuUnlikely(ndp < -MaxNDP) ? -MaxNDP :
@@ -183,15 +183,15 @@ struct ZuVFmt {
   }
 
   // accessors
-  ZuInline int justification() const { return m_justification; }
-  ZuInline bool hex() const { return m_hex; }
-  ZuInline bool upper() const { return m_upper; }
-  ZuInline bool alt() const { return m_alt; }
-  ZuInline char comma() const { return m_comma; }
-  ZuInline unsigned width() const { return m_width; }
-  ZuInline int pad() const { return m_pad; }
-  ZuInline int ndp() const { return m_ndp; }
-  ZuInline char trim() const { return m_trim; }
+  int justification() const { return m_justification; }
+  bool hex() const { return m_hex; }
+  bool upper() const { return m_upper; }
+  bool alt() const { return m_alt; }
+  char comma() const { return m_comma; }
+  unsigned width() const { return m_width; }
+  int pad() const { return m_pad; }
+  int ndp() const { return m_ndp; }
+  char trim() const { return m_trim; }
 
 private:
 #pragma pack(push, 1)
@@ -212,29 +212,29 @@ template <typename Impl> struct ZuVFmtWrapper {
 
   Impl *impl() { return static_cast<Impl *>(this); }
 
-  ZuInline Impl &reset() { fmt.reset(); return *impl(); }
-  ZuInline Impl &left(unsigned width, char pad = '\0') {
+  Impl &reset() { fmt.reset(); return *impl(); }
+  Impl &left(unsigned width, char pad = '\0') {
     fmt.left(width, pad);
     return *impl();
   }
-  ZuInline Impl &right(unsigned width, char pad = '0') {
+  Impl &right(unsigned width, char pad = '0') {
     fmt.right(width, pad);
     return *impl();
   }
-  ZuInline Impl &frac(unsigned ndp, char trim = '\0') {
+  Impl &frac(unsigned ndp, char trim = '\0') {
     fmt.frac(ndp, trim);
     return *impl();
   }
-  ZuInline Impl &hex() { fmt.hex(); return *impl(); }
-  ZuInline Impl &hex(bool upper) { fmt.hex(upper); return *impl(); }
-  ZuInline Impl &hex(bool hex_, bool upper) {
+  Impl &hex() { fmt.hex(); return *impl(); }
+  Impl &hex(bool upper) { fmt.hex(upper); return *impl(); }
+  Impl &hex(bool hex_, bool upper) {
     fmt.hex(hex_, upper);
     return *impl();
   }
-  ZuInline Impl &comma(char comma_ = ',') { fmt.comma(comma_); return *impl(); }
-  ZuInline Impl &alt() { fmt.alt(); return *impl(); }
-  ZuInline Impl &alt(bool alt_) { fmt.alt(alt_); return *impl(); }
-  ZuInline Impl &fp(int ndp = -ZuFmt::MaxNDP, char trim = '\0') {
+  Impl &comma(char comma_ = ',') { fmt.comma(comma_); return *impl(); }
+  Impl &alt() { fmt.alt(); return *impl(); }
+  Impl &alt(bool alt_) { fmt.alt(alt_); return *impl(); }
+  Impl &fp(int ndp = -ZuFmt::MaxNDP, char trim = '\0') {
     fmt.fp(ndp, trim);
     return *impl();
   }

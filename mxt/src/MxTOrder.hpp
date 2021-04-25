@@ -75,7 +75,7 @@ namespace MxTEventFlags { // event flags
   MxEnumValues(
       Rx,		// received (cleared before each txn)
       Tx,		// transmitted (cleared before each txn)
-      Ack,		// OMC - acknowledged - cleared before each txn)
+      Ack,		// OMC - acknowledged (cleared before each txn)
       C, ModifyCxl = C,	// synthetic cancel/replace in progress
       M, ModifyNew = M,	// new order/ack following modify-on-queue
       Unsolicited,	// unsolicited modified/canceled from market
@@ -704,27 +704,27 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
     enum { Size =
       (sizeof(Largest) + sizeof(uintptr_t) - 1) / sizeof(uintptr_t) };
 
-    ZuInline Buf() { as<Event>().eventState = MxTEventState::Unset; }
+    Buf() { as<Event>().eventState = MxTEventState::Unset; }
 
-    ZuInline const void *ptr() const { return &data[0]; }
-    ZuInline void *ptr() { return &data[0]; }
+    const void *ptr() const { return &data[0]; }
+    void *ptr() { return &data[0]; }
 
-    template <typename T> ZuInline const T &as() const {
+    template <typename T> const T &as() const {
       const T *ZuMayAlias(ptr) = (const T *)&data[0];
       return *ptr;
     }
-    template <typename T> ZuInline T &as() {
+    template <typename T> T &as() {
       T *ZuMayAlias(ptr) = (T *)&data[0];
       return *ptr;
     }
 
-    ZuInline Event &event() { return as<Event>(); }
-    ZuInline const Event &event() const { return as<Event>(); }
+    Event &event() { return as<Event>(); }
+    const Event &event() const { return as<Event>(); }
 
-    ZuInline const MxEnum &type() const { return as<Event>().eventType; }
-    ZuInline const MxUInt8 &flags() const { return as<Event>().eventFlags; }
+    const MxEnum &type() const { return as<Event>().eventType; }
+    const MxUInt8 &flags() const { return as<Event>().eventFlags; }
 
-    ZuInline bool operator !() const { return !as<Event>(); }
+    bool operator !() const { return !as<Event>(); }
     ZuOpBool;
 
     size_t size() {
@@ -811,15 +811,17 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
       memcpy((void *)this, &data.txn, sizeof(typename Data_::T));
     }
   public:
-    template <typename Data_> Txn(const Data_ &data,
-	typename ZuIfT<ZuConversion<Data__, Data_>::Base &&
-	  sizeof(typename Data_::T) <= sizeof(Largest)>::T *_ = 0) {
+    template <typename Data_>
+    Txn(const Data_ &data, typename ZuIfT<
+	ZuConversion<Data__, Data_>::Base &&
+	sizeof(typename Data_::T) <= sizeof(Largest)>::T *_ = 0) {
       initData(data);
     }
-    template <typename Data_> typename ZuIfT<
-	ZuConversion<Data__, Data_>::Base &&
-	  sizeof(typename Data_::T) <= sizeof(Largest),
-	Txn &>::T operator =(const Data_ &data) {
+    template <typename Data_>
+    typename ZuIfT<
+      ZuConversion<Data__, Data_>::Base &&
+      sizeof(typename Data_::T) <= sizeof(Largest), Txn &>::T
+    operator =(const Data_ &data) {
       initData(data);
       return *this;
     }

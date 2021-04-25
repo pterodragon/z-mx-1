@@ -31,6 +31,41 @@
 // #include <sqlite3.h>
 #include <sqlite3ext.h> // includes sqlite3.h
 
+namespace ZvSQL {
+
+class ZvAPI DB {
+  // FIXME - initialize(), config(), shutdown()
+  // FIXME - some config options from ZvCf, others hard-coded
+  // FIXME - single-threaded, scheduler, ZvCf thread selection
+  // FIXME - run, invoke (per other Mgr classes)
+
+// FIXME - WAL auto-checkpoint configuration, etc.
+
+};
+
+// FIXME - RAII Txn with prepared statements for savepoint, commit
+// - can be nested
+
+class ZvAPI Table {
+  Table() = delete;
+  Table(const Table &) = delete;
+  Table &operator =(const Table &) = delete;
+  Table(Table &&) = delete;
+  Table &operator =(Table &&) = delete;
+public:
+  ~Table() = delete;
+
+  Table(ZvFieldArray fields, ZuString name);
+
+  const ZtString &name() const { return m_name; }
+
+  void init(Mgr *mgr);
+
+  bool open(ZeError *e = nullptr);
+  bool close(ZeError *e = nullptr);
+
+};
+
 // FIXME - use WAL (write ahead logging)
 //
 // FIXME - update ZvField usages to new interface (update all

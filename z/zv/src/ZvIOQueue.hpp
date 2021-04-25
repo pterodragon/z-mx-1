@@ -230,25 +230,25 @@ public:
   using Guard = ZmGuard<Lock>;
 
 protected:
-  ZuInline const Lock &lock() const { return m_lock; }
-  ZuInline Lock &lock() { return m_lock; }
+  const Lock &lock() const { return m_lock; }
+  Lock &lock() { return m_lock; }
 
 public:
-  ZuInline ZvIOQueueTx() : m_queue(new ZvIOQueue(ZvSeqNo{})) { }
+  ZvIOQueueTx() : m_queue(new ZvIOQueue(ZvSeqNo{})) { }
 
-  ZuInline const Impl *impl() const { return static_cast<const Impl *>(this); }
-  ZuInline Impl *impl() { return static_cast<Impl *>(this); }
+  const Impl *impl() const { return static_cast<const Impl *>(this); }
+  Impl *impl() { return static_cast<Impl *>(this); }
 
-  ZuInline const ZvSeqNo txSeqNo() const { return m_seqNo; }
+  const ZvSeqNo txSeqNo() const { return m_seqNo; }
 
-  ZuInline const ZvIOQueue *txQueue() const { return m_queue; }
-  ZuInline ZvIOQueue *txQueue() { return m_queue; }
+  const ZvIOQueue *txQueue() const { return m_queue; }
+  ZvIOQueue *txQueue() { return m_queue; }
 
-  ZuInline void txInit(ZvSeqNo seqNo) {
+  void txInit(ZvSeqNo seqNo) {
     if (seqNo > m_seqNo) m_queue->head(m_seqNo = seqNo);
   }
 
-  ZuInline void send() { Tx::send(); }
+  void send() { Tx::send(); }
   void send(ZmRef<ZvIOMsg> msg) {
     if (ZuUnlikely(msg->noQueue())) {
       Guard guard(m_lock);
@@ -282,12 +282,12 @@ public:
     }
   }
 
-  ZuInline void ackd(ZvSeqNo seqNo) {
+  void ackd(ZvSeqNo seqNo) {
     if (m_seqNo < seqNo) m_seqNo = seqNo;
     Tx::ackd(seqNo);
   }
 
-  ZuInline void txReset(ZvSeqNo seqNo = ZvSeqNo{}) {
+  void txReset(ZvSeqNo seqNo = ZvSeqNo{}) {
     Tx::txReset(m_seqNo = seqNo);
   }
 
@@ -353,8 +353,8 @@ class ZvIOQueueTxPool : public ZvIOQueueTx<Impl, Lock_> {
 	    ZmRBTreeHeapID<Queues_HeapID> > > > >;
 
 public:
-  ZuInline void loaded_(ZvIOMsg *) { }   // may be overridden by Impl
-  ZuInline void unloaded_(ZvIOMsg *) { } // ''
+  void loaded_(ZvIOMsg *) { }   // may be overridden by Impl
+  void unloaded_(ZvIOMsg *) { } // ''
 
   bool send_(ZvIOMsg *msg, bool more) {
     if (ZmRef<Tx> next = next_()) {
@@ -364,15 +364,15 @@ public:
     }
     return false;
   }
-  ZuInline bool resend_(ZvIOMsg *, bool) { return true; } // unused
-  ZuInline void aborted_(ZvIOMsg *) { } // unused
+  bool resend_(ZvIOMsg *, bool) { return true; } // unused
+  void aborted_(ZvIOMsg *) { } // unused
 
-  ZuInline bool sendGap_(const Gap &, bool) { return true; } // unused
-  ZuInline bool resendGap_(const Gap &, bool) { return true; } // unused
+  bool sendGap_(const Gap &, bool) { return true; } // unused
+  bool resendGap_(const Gap &, bool) { return true; } // unused
 
-  ZuInline void sent_(ZvIOMsg *msg) { Tx::ackd(msg->id().seqNo + 1); }
-  ZuInline void archive_(ZvIOMsg *msg) { Tx::archived(msg->id().seqNo + 1); }
-  ZuInline ZmRef<ZvIOMsg> retrieve_(ZvSeqNo, ZvSeqNo) { // unused
+  void sent_(ZvIOMsg *msg) { Tx::ackd(msg->id().seqNo + 1); }
+  void archive_(ZvIOMsg *msg) { Tx::archived(msg->id().seqNo + 1); }
+  ZmRef<ZvIOMsg> retrieve_(ZvSeqNo, ZvSeqNo) { // unused
     return nullptr;
   }
 

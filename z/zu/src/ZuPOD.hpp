@@ -36,20 +36,20 @@
 
 class ZuAnyPOD_Data {
 public:
-  template <typename T = void> ZuInline const T *ptr() const {
+  template <typename T = void> const T *ptr() const {
     const T *ZuMayAlias(ptr) = reinterpret_cast<const T *>(this);
     return ptr;
   }
-  template <typename T = void> ZuInline T *ptr() {
+  template <typename T = void> T *ptr() {
     T *ZuMayAlias(ptr) = reinterpret_cast<T *>(this);
     return ptr;
   }
 
-  template <typename T> ZuInline const T &as() const {
+  template <typename T> const T &as() const {
     const T *ZuMayAlias(ptr) = reinterpret_cast<const T *>(this);
     return *ptr;
   }
-  template <typename T> ZuInline T &as() {
+  template <typename T> T &as() {
     T *ZuMayAlias(ptr) = reinterpret_cast<T *>(this);
     return *ptr;
   }
@@ -60,9 +60,9 @@ private:
 
 class ZuAnyPOD_Size {
 public:
-  ZuInline ZuAnyPOD_Size(unsigned size) : m_size(size) { }
+  ZuAnyPOD_Size(unsigned size) : m_size(size) { }
 
-  ZuInline unsigned size() const { return m_size; }
+  unsigned size() const { return m_size; }
 
 private:
   unsigned	m_size;
@@ -72,7 +72,7 @@ template <typename Base>
 class ZuAnyPOD_ : public Base, public ZuAnyPOD_Size, public ZuAnyPOD_Data {
 public:
   template <typename ...Args>
-  ZuInline ZuAnyPOD_(unsigned size, Args &&... args) :
+  ZuAnyPOD_(unsigned size, Args &&... args) :
     Base(ZuFwd<Args>(args)...), ZuAnyPOD_Size(size) { }
   virtual ~ZuAnyPOD_() { }
 
@@ -96,18 +96,19 @@ public:
     ZuAnyPOD_<Base>(sizeof(T), ZuFwd<Args>(args)...) { }
 
   template <typename T = T_>
-  ZuInline const T *ptr() const { return ZuAnyPOD_<Base>::template ptr<T>(); }
+  const T *ptr() const { return ZuAnyPOD_<Base>::template ptr<T>(); }
   template <typename T = T_>
-  ZuInline T *ptr() { return ZuAnyPOD_<Base>::template ptr<T>(); }
+  T *ptr() { return ZuAnyPOD_<Base>::template ptr<T>(); }
 
-  ZuInline const T &data() const { return this->template as<T>(); }
-  ZuInline T &data() { return this->template as<T>(); }
+  const T &data() const { return this->template as<T>(); }
+  T &data() { return this->template as<T>(); }
 
-  ZuInline static const ZuPOD_ *pod(const T *data) {
-    const ZuAnyPOD_Data *ZuMayAlias(ptr) = reinterpret_cast<const ZuAnyPOD_Data *>(data);
+  static const ZuPOD_ *pod(const T *data) {
+    const ZuAnyPOD_Data *ZuMayAlias(ptr) =
+      reinterpret_cast<const ZuAnyPOD_Data *>(data);
     return static_cast<const ZuPOD_ *>(ptr);
   }
-  ZuInline static ZuPOD_ *pod(T *data) {
+  static ZuPOD_ *pod(T *data) {
     ZuAnyPOD_Data *ZuMayAlias(ptr) = reinterpret_cast<ZuAnyPOD_Data *>(data);
     return static_cast<ZuPOD_ *>(ptr);
   }
@@ -124,13 +125,13 @@ public:
   ZuPOD_(Args &&... args) :
     ZuAnyPOD_<Base>(sizeof(T), ZuFwd<Args>(args)...) { }
 
-  template <typename T = T_>
-  ZuInline const T *ptr() const { return ZuAnyPOD_<Base>::template ptr<T>(); }
-  template <typename T = T_>
-  ZuInline T *ptr() { return ZuAnyPOD_<Base>::template ptr<T>(); }
+  template <typename U = T>
+  const U *ptr() const { return ZuAnyPOD_<Base>::template ptr<U>(); }
+  template <typename U = T>
+  U *ptr() { return ZuAnyPOD_<Base>::template ptr<U>(); }
 
-  ZuInline const T &data() const { return this->template as<T>(); }
-  ZuInline T &data() { return this->template as<T>(); }
+  const T &data() const { return this->template as<T>(); }
+  T &data() { return this->template as<T>(); }
 };
 
 template <typename T> using ZuPOD = ZuPOD_<T, ZuPolymorph>;

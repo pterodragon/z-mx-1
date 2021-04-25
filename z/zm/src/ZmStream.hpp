@@ -167,4 +167,15 @@ private:
 
 using ZmStreamFn = ZmFn<ZmStream &>;
 
+template <typename S>
+inline S &operator <<(S &s, const ZmStreamFn &fn) {
+  ZmStream s_{s};
+  fn(s_);
+  return s;
+}
+inline ZmStream &operator <<(ZmStream &s, const ZmStreamFn &fn) {
+  fn(s);
+  return s;
+}
+
 #endif /* ZmStream_HPP */

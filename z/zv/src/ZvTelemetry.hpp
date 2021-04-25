@@ -1256,7 +1256,7 @@ template <> struct load<Alert> : public Alert {
     .message = Zfb::Load::str(alert_->message())
   } { }
 };
-void Alert::loadDelta(const fbs::Alert *alert_) {
+inline void Alert::loadDelta(const fbs::Alert *alert_) {
   this->~Alert();
   new (static_cast<void *>(this)) load<Alert>{alert_};
 }

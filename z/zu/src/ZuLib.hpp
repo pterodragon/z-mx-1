@@ -219,14 +219,6 @@ template <typename L> struct ZuGuard {
     return !*this ? (const void *)0 : (const void *)this; \
   }
 
-// generic swap
-template <typename T>
-void ZuSwap(T &v1, T &v2) {
-  T tmp = ZuMv(v1);
-  v1 = ZuMv(v2);
-  v2 = ZuMv(tmp);
-}
-
 // move/copy universal reference
 // ZuMvCp<U>::mvcp(ZuFwd<U>(u), [](auto &&v) { }, [](const auto &v) { });
 template <typename T_> struct ZuMvCp {
@@ -250,6 +242,7 @@ template <typename T_> struct ZuMvCp {
 
 // type list
 template <typename ...Args> struct ZuTypeList {
+  enum { N = sizeof...(Args) };
   template <typename ...Args_> struct Append {
     using T = ZuTypeList<Args..., Args_...>;
   };
@@ -264,18 +257,13 @@ template <typename T0, typename ...Args>
 struct ZuType<0, T0, Args...> {
   using T = T0;
 };
-template <typename T0, typename ...Args>
-struct ZuType<0, ZuTypeList<T0, Args...>> {
-  using T = T0;
-};
 template <unsigned I, typename O, typename ...Args>
 struct ZuType<I, O, Args...> {
   using T = typename ZuType<I - 1, Args...>::T;
 };
-template <unsigned I, typename O, typename ...Args>
-struct ZuType<I, ZuTypeList<O, Args...>> {
-  using T = typename ZuType<I - 1, Args...>::T;
-};
+template <unsigned I, typename ...Args>
+struct ZuType<I, ZuTypeList<Args...>> :
+  public ZuType<I, Args...> { };
 
 // type -> index
 template <typename, typename ...> struct ZuTypeIndex;
@@ -283,27 +271,18 @@ template <typename T, typename ...Args>
 struct ZuTypeIndex<T, T, Args...> {
   enum { I = 0 };
 };
-template <typename T, typename ...Args>
-struct ZuTypeIndex<T, ZuTypeList<T, Args...>> {
-  enum { I = 0 };
-};
 template <typename T, typename O, typename ...Args>
 struct ZuTypeIndex<T, O, Args...> {
   enum { I = 1 + ZuTypeIndex<T, Args...>::I };
 };
-template <typename T, typename O, typename ...Args>
-struct ZuTypeIndex<T, ZuTypeList<O, Args...>> {
-  enum { I = 1 + ZuTypeIndex<T, Args...>::I };
-};
+template <typename T, typename ...Args>
+struct ZuTypeIndex<T, ZuTypeList<Args...>> :
+  public ZuTypeIndex<T, Args...> { };
 
 // map
 template <template <typename> class, typename ...> struct ZuTypeMap;
 template <template <typename> class Map, typename T0>
 struct ZuTypeMap<Map, T0> {
-  using T = ZuTypeList<typename Map<T0>::T>;
-};
-template <template <typename> class Map, typename T0>
-struct ZuTypeMap<Map, ZuTypeList<T0>> {
   using T = ZuTypeList<typename Map<T0>::T>;
 };
 template <template <typename> class Map, typename T0, typename ...Args>
@@ -312,12 +291,32 @@ struct ZuTypeMap<Map, T0, Args...> {
     typename ZuTypeList<typename Map<T0>::T>::template Append<
       typename ZuTypeMap<Map, Args...>::T>::T;
 };
-template <template <typename> class Map, typename T0, typename ...Args>
-struct ZuTypeMap<Map, ZuTypeList<T0, Args...>> {
-  using T =
-    typename ZuTypeList<typename Map<T0>::T>::template Append<
-      typename ZuTypeMap<Map, Args...>::T>::T;
+template <template <typename> class Map, typename ...Args>
+struct ZuTypeMap<Map, ZuTypeList<Args...>> :
+  public ZuTypeMap<Map, Args...> { };
+
+// grep
+template <bool, typename> struct ZuTypeGrep_;
+template <typename T0> struct ZuTypeGrep_<true, T0> {
+  using T = ZuTypeList<T0>;
 };
+template <typename T0> struct ZuTypeGrep_<false, T0> {
+  using T = ZuTypeList<>;
+};
+template <template <typename> class, typename ...> struct ZuTypeGrep;
+template <template <typename> class Filter, typename T0>
+struct ZuTypeGrep<Filter, T0> {
+  using T = ZuTypeGrep_<Filter<T0>::OK, T0>::T;
+};
+template <template <typename> class Filter, typename T0, typename ...Args>
+struct ZuTypeGrep<Filter, T0, Args...> {
+  using T =
+    typename ZuTypeGrep_<Filter<T0>::OK, T0>::T::template Append<
+      typename ZuTypeGrep<Filter, Args...>::T>::T;
+};
+template <template <typename> class Filter, typename ...Args>
+struct ZuTypeGrep<Filter, ZuTypeList<Args...>> :
+  public ZuTypeGrep<Filter, Args...> { };
 
 // reduce (recursive pair-wise reduction)
 template <template <typename...> class, typename ...>
@@ -326,16 +325,8 @@ template <template <typename...> class Reduce, typename T0>
 struct ZuTypeReduce<Reduce, T0> {
   using T = typename Reduce<T0>::T;
 };
-template <template <typename...> class Reduce, typename T0>
-struct ZuTypeReduce<Reduce, ZuTypeList<T0>> {
-  using T = typename Reduce<T0>::T;
-};
 template <template <typename...> class Reduce, typename T0, typename T1>
 struct ZuTypeReduce<Reduce, T0, T1> {
-  using T = typename Reduce<T0, T1>::T;
-};
-template <template <typename...> class Reduce, typename T0, typename T1>
-struct ZuTypeReduce<Reduce, ZuTypeList<T0, T1>> {
   using T = typename Reduce<T0, T1>::T;
 };
 template <
@@ -345,19 +336,40 @@ struct ZuTypeReduce<Reduce, T0, T1, Args...> {
   using T =
     typename Reduce<T0, typename ZuTypeReduce<Reduce, T1, Args...>::T>::T;
 };
-template <
-  template <typename...> class Reduce,
-  typename T0, typename T1, typename ...Args>
-struct ZuTypeReduce<Reduce, ZuTypeList<T0, T1, Args...>> {
-  using T =
-    typename Reduce<T0, typename ZuTypeReduce<Reduce, T1, Args...>::T>::T;
-};
+template <template <typename...> class Reduce, typename ...Args>
+struct ZuTypeReduce<Reduce, ZuTypeList<Args...>> :
+  public ZuTypeReduce<Reduce, Args...> { };
 
 // apply typelist to template
 template <template <typename...> class Type, typename ...Args>
 struct ZuTypeApply { using T = Type<Args...>; };
 template <template <typename...> class Type, typename ...Args>
-struct ZuTypeApply<Type, ZuTypeList<Args...>> { using T = Type<Args...>; };
+struct ZuTypeApply<Type, ZuTypeList<Args...>> :
+  public ZuTypeApply<Type, Args...> { };
+
+// invoke lambda on all elements of typelist []<typename T>() { ...; }
+template <typename ...>
+struct ZuTypeAll {
+  template <typename L> static ZuInline void invoke(L) { }
+  template <typename L> static ZuInline void invoke_(L &) { }
+};
+template <typename T0>
+struct ZuTypeAll<T0> {
+  template <typename L> static ZuInline void invoke(L l) { invoke_(l); }
+  template <typename L> static ZuInline void invoke_(L &l) {
+    l.template operator ()<T0>();
+  }
+};
+template <typename T0, typename ...Args>
+struct ZuTypeAll<T0, Args...> {
+  template <typename L> static ZuInline void invoke(L l) { invoke_(l); }
+  template <typename L> static ZuInline void invoke_(L &l) {
+    l.template operator ()<T0>();
+    ZuTypeAll<Args...>::invoke_(l);
+  }
+};
+template <typename ...Args>
+struct ZuTypeAll<ZuTypeList<Args...>> : public ZuTypeAll<Args...> { };
 
 // compile-time policy tag for intrusively shadowed (not owned) objects
 class ZuShadow { }; // tag

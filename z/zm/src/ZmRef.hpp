@@ -201,7 +201,7 @@ public:
     return *this;
   }
   template <typename R>
-  typename MatchOtherRef<R, ZmRef &>::T operator =(R r) {
+  typename MatchOtherRef<R, ZmRef &>::T operator =(R r) noexcept {
     swap(r);
     return *this;
   }

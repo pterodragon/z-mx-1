@@ -78,16 +78,17 @@ namespace ZvCSV_ {
       Row &row, const Field *field, const T *object, const Fmt &fmt) {
     switch ((int)field->type) {
       case ZvFieldType::String:
+      case ZvFieldType::Stream:
       case ZvFieldType::Enum:
       case ZvFieldType::Flags: {
 	ZtString s_;
 	ZmStream s{s_};
-	field->print(s, object, fmt);
+	field->print(object, s, fmt);
 	quote_(row, s_);
       } break;
       default: {
 	ZmStream s{row};
-	field->print(s, object, fmt);
+	field->print(object, s, fmt);
       } break;
     }
   }
@@ -187,12 +188,12 @@ private:
     for (unsigned i = 0; i < m; i++) {
       int j;
       if ((j = colIndex[i]) < 0 || j >= (int)n)
-        m_fields[i].scan(ZuString(), object, fmt);
+        m_fields[i].scan(object, ZuString{}, fmt);
     }
     for (unsigned i = 0; i < m; i++) {
       int j;
       if ((j = colIndex[i]) >= 0 && j < (int)n)
-        m_fields[i].scan(a[j], object, fmt);
+        m_fields[i].scan(object, a[j], fmt);
     }
   }
 

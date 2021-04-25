@@ -48,8 +48,8 @@ template <typename App_> class MxRxDB {
 public:
   using App = App_;
 
-  ZuInline const App *app() const { return static_cast<const App *>(this); }
-  ZuInline App *app() { return static_cast<App *>(this); }
+  const App *app() const { return static_cast<const App *>(this); }
+  App *app() { return static_cast<App *>(this); }
 
   enum { DBVersion = 0 }; // increment when schema changes
 
@@ -82,7 +82,7 @@ public:
     m_rxDB = nullptr;
   }
 
-  ZuInline RxDB *rxDB() const { return m_rxDB; }
+  RxDB *rxDB() const { return m_rxDB; }
 
   template <typename Link>
   void rxStore(Link *link, const MxMsgID &msgID) {

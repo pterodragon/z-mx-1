@@ -126,7 +126,7 @@ public:
     return *this;
   }
   template <typename R>
-  typename MatchOtherPtr<R, ZuPtr &>::T operator =(R r) {
+  typename MatchOtherPtr<R, ZuPtr &>::T operator =(R r) noexcept {
     swap(r);
     return *this;
   }

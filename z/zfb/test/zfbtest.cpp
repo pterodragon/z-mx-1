@@ -13,11 +13,13 @@
 
 #include "zfbtest_fbs.h"
 
-std::vector<ZmRef<Zfb::IOBuf>> bufs;
+using IOBuilder = Zfb::IOBuilder<>;
+using IOBuf = IOBuilder::IOBuf;
+std::vector<ZmRef<IOBuf>> bufs;
 
-void build(Zfb::IOBuilder &fbb, unsigned n, bool detach)
+void build(IOBuilder &fbb, unsigned n, bool detach)
 {
-  ZmRef<Zfb::IOBuf> buf;
+  ZmRef<IOBuf> buf;
   {
     uint8_t *zero = (uint8_t *)::malloc(n);
     memset(zero, 0, n);
@@ -48,7 +50,7 @@ int main(int argc, char **argv)
 {
   if (argc != 2) { std::cerr << "usage N\n" << std::flush; exit(1); }
   unsigned n = ZuBox<unsigned>(argv[1]);
-  Zfb::IOBuilder fbb;
+  IOBuilder fbb;
   build(fbb, n, false);
   build(fbb, n, true);
   build(fbb, n, true);

@@ -50,6 +50,8 @@
 #pragma once
 #endif
 
+#include <utility>
+
 #include <zlib/ZuCmp.hpp>
 #include <zlib/ZuLambdaFn.hpp>
 #include <zlib/ZuArrayFn.hpp>
@@ -59,6 +61,7 @@ struct ZuSort_Fn {
   using Fn = ZuArrayFn<T>;
 
   static void isort_(T *base, unsigned n, Cmp &cmp) {
+    using std::swap;
     T *end = base + n; // past end
     T *minimum = base, *ptr = base;
     // find minimum
@@ -67,7 +70,7 @@ struct ZuSort_Fn {
 	minimum = ptr;
     // swap minimum into base
     if (minimum != base) {
-      ZuSwap(*minimum, *base);
+      swap(*minimum, *base);
       minimum = base;
     }
     // standard insertion sort
@@ -82,6 +85,7 @@ struct ZuSort_Fn {
   }
 
   static void qsort_(T *base, unsigned n, Cmp &cmp) {
+    using std::swap;
   loop:
     T *middle = base + (n>>1);
     {
@@ -96,7 +100,7 @@ struct ZuSort_Fn {
 	ptr = cmp(*middle, *end) >= 0 ? middle : end;
       // swap pivot into base (gets swapped back later)
       if (ptr != base) {
-	ZuSwap(*ptr, *base);
+	swap(*ptr, *base);
 	ptr = base;
       }
       // standard quicksort & check for flat partition
@@ -108,13 +112,13 @@ struct ZuSort_Fn {
 	  j++;
 	if (k < 0) {
 	  if (++middle != ptr) {
-	    ZuSwap(*middle, *ptr);
+	    swap(*middle, *ptr);
 	  }
 	}
       }
       if (j == n) return; // exit if flat
     }
-    if (base != middle) ZuSwap(*base, *middle); // swap back pivot
+    if (base != middle) swap(*base, *middle); // swap back pivot
     unsigned i = middle - base;
     if (i < (n>>1)) {
       // recurse smaller partition

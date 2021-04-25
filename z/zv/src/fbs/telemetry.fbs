@@ -21,8 +21,8 @@ table Heap {			// == ZmHeapTelemetry
 table HashTbl {			// == ZmHashTelemetry
   id:string;
   addr:uint64;
-  loadFactor:float;
-  effLoadFactor:float;
+  loadFactor:double;
+  effLoadFactor:double;
   nodeSize:uint32;
   count:uint32;
   resized:uint32;
@@ -41,7 +41,7 @@ table Thread {			// == ZmThreadTelemetry
   tid:uint64;
   stackSize:uint64;
   cpuset:[uint64];
-  cpuUsage:float;
+  cpuUsage:double;
   sysPriority:int32;
   index:int16;
   partition:uint16;

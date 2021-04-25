@@ -37,7 +37,7 @@
 #include <zlib/ZvField.hpp>
 #include <zlib/ZvCSV.hpp>
 
-struct ZvAPI ZvHeapCSV {
+struct ZvHeapCSV {
   struct Data : public ZvFieldTuple<Data> {
     static const ZvFieldArray fields() noexcept;
 

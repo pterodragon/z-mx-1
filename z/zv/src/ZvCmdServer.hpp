@@ -167,10 +167,16 @@ private:
       Verifier verifier{data, len};
       if (!fbs::VerifyRequestBuffer(verifier)) return -1;
     }
+    // FIXME - move m_fbb to userDB (and Cmd, etc.), will be specific
+    // to threads those components use to satisfy requests asynchronously
+    // FIXME - pass this (i.e. link) rather than m_fbb
+    // FIXME - build hdr and send_ in callee if synchronous; schedule async send() with captured link ref if asynchronous
     this->app()->processUserDB(
 	m_user, m_interactive, fbs::GetRequest(data), m_fbb);
-    ZvCmdHdr{m_fbb, ZvCmd::ID::userDB()};
-    this->send_(m_fbb.buf());
+    if (m_fbb.Size()) { // synchronous response
+      ZvCmdHdr{m_fbb, ZvCmd::ID::userDB()};
+      this->send_(m_fbb.buf());
+    }
     return len;
   }
   int processCmd(const uint8_t *data, unsigned len) {
@@ -272,12 +278,11 @@ friend TLS;
 
   struct UserDB : public ZuObject, public ZvUserDB::Mgr {
     template <typename ...Args>
-    ZuInline UserDB(Args &&... args) :
-	ZvUserDB::Mgr(ZuFwd<Args>(args)...) { }
+    UserDB(Args &&... args) : ZvUserDB::Mgr{ZuFwd<Args>(args)...} { }
   };
 
-  ZuInline const App *app() const { return static_cast<const App *>(this); }
-  ZuInline App *app() { return static_cast<App *>(this); }
+  const App *app() const { return static_cast<const App *>(this); }
+  App *app() { return static_cast<App *>(this); }
 
   void init(ZiMultiplex *mx, const ZvCf *cf) {
     static const char *alpn[] = { "zcmd", 0 };
@@ -354,22 +359,22 @@ private:
     return new TCP(new Link{app()}, ci);
   }
 public:
-  ZuInline ZiIP localIP() const { return m_ip; }
-  ZuInline unsigned localPort() const { return m_port; }
-  ZuInline unsigned nAccepts() const { return m_nAccepts; }
-  ZuInline unsigned rebindFreq() const { return m_rebindFreq; }
-  ZuInline unsigned timeout() const { return m_timeout; }
+  ZiIP localIP() const { return m_ip; }
+  unsigned localPort() const { return m_port; }
+  unsigned nAccepts() const { return m_nAccepts; }
+  unsigned rebindFreq() const { return m_rebindFreq; }
+  unsigned timeout() const { return m_timeout; }
 
-  ZuInline const ZtString &userDBPath() const { return m_userDBPath; }
-  ZuInline unsigned userDBFreq() const { return m_userDBFreq; }
-  ZuInline unsigned userDBMaxAge() const { return m_userDBMaxAge; }
+  const ZtString &userDBPath() const { return m_userDBPath; }
+  unsigned userDBFreq() const { return m_userDBFreq; }
+  unsigned userDBMaxAge() const { return m_userDBMaxAge; }
 
-  ZuInline int cmdPerm() const { return m_cmdPerm; } // -1 if unset
+  int cmdPerm() const { return m_cmdPerm; } // -1 if unset
 
-  ZuInline int findPerm(ZuString name) const {
+  int findPerm(ZuString name) const {
     return m_userDB->findPerm(name);
   }
-  ZuInline bool ok(User *user, bool interactive, unsigned perm) const {
+  bool ok(User *user, bool interactive, unsigned perm) const {
     return m_userDB->ok(user, interactive, perm);
   }
 

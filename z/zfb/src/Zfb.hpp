@@ -54,16 +54,16 @@ using namespace flatbuffers;
 
 using Builder = FlatBufferBuilder;
 
-using IOBuf = ZiIOBuf<>;
-
 // IOBuilder customizes FlatBufferBuilder with an allocator that
 // builds directly into a detachable IOBuf for transmission/persistence
+template <unsigned Size_ = ZiIOBuf<>::Size>
 class IOBuilder : public Allocator, public Builder {
 public:
+  enum { Size = Size_ };
   enum { Align = 8 };
+  using IOBuf = ZiIOBuf<Size>;
 
-  IOBuilder() : Builder(
-      IOBuf::Size & ~(Align - 1), this, false, Align) { }
+  IOBuilder() : Builder{Size & ~(Align - 1), this, false, Align} { }
 
   ZmRef<IOBuf> buf() {
     if (ZuUnlikely(!m_buf)) return nullptr;
@@ -78,7 +78,7 @@ public:
 
 protected:
   uint8_t *allocate(size_t size) {
-    if (ZuLikely(!m_buf)) m_buf = new IOBuf();
+    if (ZuLikely(!m_buf)) m_buf = new IOBuf{};
     return m_buf->alloc(size);
   }
 
@@ -95,6 +95,8 @@ protected:
 private:
   ZmRef<IOBuf>	m_buf;
 };
+template <unsigned Size = ZiIOBuf<>::Size>
+using IOBuf = ZiIOBuf<Size>;
 
 namespace Save {
   // compile-time-recursive vector push
@@ -118,7 +120,7 @@ namespace Save {
   // inline creation of a vector of primitive scalars
   template <typename T, typename B, typename ...Args>
   inline Offset<Vector<T>> pvector(B &b, Args &&... args) {
-    auto n = ZuConstant<sizeof...(args)>{};
+    auto n = ZuConstant<sizeof...(Args)>{};
     T *buf = ZuAlloca(buf, n);
     if (ZuUnlikely(!buf)) return {};
     push_(buf, ZuConstant<0>{}, ZuFwd<Args>(args)...);
@@ -128,7 +130,7 @@ namespace Save {
   // inline creation of a vector of lambda-transformed non-primitive values
   template <typename T, typename B, typename L, typename ...Args>
   inline Offset<Vector<Offset<T>>> lvector(B &b, L l, Args &&... args) {
-    auto n = ZuConstant<sizeof...(args)>{};
+    auto n = ZuConstant<sizeof...(Args)>{};
     Offset<T> *buf = ZuAlloca(buf, n);
     if (ZuUnlikely(!buf)) return {};
     lpush_(buf, ZuConstant<0>{}, l, ZuFwd<Args>(args)...);
@@ -137,7 +139,7 @@ namespace Save {
   // inline creation of a vector of non-primitive values
   template <typename T, typename B, typename ...Args>
   inline Offset<Vector<Offset<T>>> vector(B &b, Args &&... args) {
-    auto n = ZuConstant<sizeof...(args)>{};
+    auto n = ZuConstant<sizeof...(Args)>{};
     Offset<T> *buf = ZuAlloca(buf, n);
     if (ZuUnlikely(!buf)) return {};
     push_(buf, ZuConstant<0>{}, ZuFwd<Args>(args)...);
@@ -155,7 +157,7 @@ namespace Save {
   // inline creation of a vector of keyed items
   template <typename T, typename B, typename ...Args>
   inline Offset<Vector<Offset<T>>> keyVec(B &b, Args &&... args) {
-    auto n = ZuConstant<sizeof...(args)>{};
+    auto n = ZuConstant<sizeof...(Args)>{};
     Offset<T> *buf = ZuAlloca(buf, n);
     if (ZuUnlikely(!buf)) return {};
     push_(buf, ZuConstant<0>{}, ZuFwd<Args>(args)...);
@@ -223,9 +225,8 @@ namespace Save {
   }
 
   // date/time
-  template <typename B>
-  inline auto dateTime(B &b, const ZtDate &v) {
-    return CreateDateTime(b, v.julian(), v.sec(), v.nsec());
+  inline auto dateTime(const ZtDate &v) {
+    return DateTime{v.julian(), v.sec(), v.nsec()};
   }
 
   // save file
@@ -316,10 +317,11 @@ namespace Load {
     } \
     void add(ZuString s, ZtEnum v) { m_s2v->add(s, v); } \
   public: \
+    using FBS = fbs::Enum; \
     Map_() { m_s2v = new S2V(); } \
     static T *instance() { return ZmSingleton<T>::instance(); } \
     static ZuString v2s(int v) { \
-      return fbs::EnumName##Enum(static_cast<fbs::Enum>(v)); \
+      return fbs::EnumName##Enum(static_cast<FBS>(v)); \
     } \
     ZtEnum s2v(ZuString s) const { return m_s2v->findVal(s); } \
     template <typename L> void all(L l) const { \
@@ -330,7 +332,7 @@ namespace Load {
     ZmRef<S2V>	m_s2v; \
   }; \
   const char *name(int i) { \
-    return fbs::EnumName##Enum(static_cast<fbs::Enum>(i)); \
+    return fbs::EnumName##Enum(static_cast<FBS>(i)); \
   } \
   struct Map : public Map_<Map> { \
     Map() { for (unsigned i = 0; i < N; i++) this->add(name(i), i); } \

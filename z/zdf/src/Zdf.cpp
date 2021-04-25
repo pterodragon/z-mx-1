@@ -28,34 +28,22 @@ DataFrame::DataFrame(ZvFieldArray fields, ZuString name, bool timeIndex) :
 {
   bool indexed = timeIndex;
   unsigned n = fields.length();
-  {
-    unsigned m = 0;
-    for (unsigned i = 0; i < n; i++)
-      if (fields[i].flags & ZvFieldFlags::Series) {
-	if (!indexed && (fields[i].flags & ZvFieldFlags::Index))
-	  indexed = true;
-	m++;
-      }
-    if (timeIndex) m++;
-    m_series.size(m);
-    m_fields.size(m);
-  }
-  indexed = timeIndex;
-  for (unsigned i = 0; i < n; i++)
-    if (fields[i].flags & ZvFieldFlags::Series) {
-      ZuPtr<Series> series = new Series();
-      if (!indexed && (fields[i].flags & ZvFieldFlags::Index)) {
-	indexed = true;
-	m_series.unshift(ZuMv(series));
-	m_fields.unshift(&fields[i]);
-      } else {
-	m_series.push(ZuMv(series));
-	m_fields.push(&fields[i]);
-      }
+  m_series.size(n + timeIndex);
+  m_fields.size(n + timeIndex);
+  for (unsigned i = 0; i < n; i++) {
+    ZuPtr<Series> series = new Series();
+    if (!indexed && (fields[i].flags & ZvFieldFlags::Index)) {
+      indexed = true;
+      m_series.unshift(ZuMv(series));
+      m_fields.unshift(&fields[i]);
+    } else {
+      m_series.push(ZuMv(series));
+      m_fields.push(&fields[i]);
     }
+  }
   if (timeIndex) {
     m_series.unshift(ZuPtr<Series>{new Series()});
-    m_fields.unshift(static_cast<ZvField *>(nullptr));
+    m_fields.unshift(static_cast<ZvVField *>(nullptr));
   }
 }
 

@@ -60,9 +60,9 @@ public:
 
     struct MsgRN : public ZuPrintable {
       ZdbRN	rn;
-      ZuInline MsgRN(ZdbRN rn_) : rn(rn_) { }
+      MsgRN(ZdbRN rn_) : rn{rn_} { }
       template <typename S>
-      ZuInline void print(S &s) const {
+      void print(S &s) const {
 	if (rn != ZdbNullRN) s << ZuBoxed(rn);
       }
     };
@@ -94,7 +94,7 @@ public:
     m_txDB = nullptr;
   }
 
-  ZuInline TxDB *txDB() const { return m_txDB; }
+  TxDB *txDB() const { return m_txDB; }
 
   // l(MxQMsg *msg, ZdbRN &rn, int32_t &type) -> void
   template <typename Link, typename L>

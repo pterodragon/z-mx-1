@@ -64,6 +64,8 @@ public:
     return *this;
   }
 
+  operator ZuString() const { return m_output; }
+
   template <typename S> void print(S &s) const { s << m_output; }
 
 private:

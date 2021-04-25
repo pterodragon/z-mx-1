@@ -296,8 +296,8 @@ public:
   // request, user, interactive
   int loginReq(const fbs::LoginReq *, ZmRef<User> &, bool &interactive);
 
-  Offset<fbs::ReqAck> request(User *, bool interactive,
-      const fbs::Request *, Zfb::Builder &);
+  Offset<fbs::ReqAck> request(
+      User *, bool interactive, const fbs::Request *, Zfb::Builder &);
 
 private:
   // interactive login

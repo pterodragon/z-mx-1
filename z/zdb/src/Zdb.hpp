@@ -74,12 +74,36 @@
 
 using ZdbID = uint32_t;		// database ID
 using ZdbRN = uint64_t;		// record ID
-#define ZdbNullRN (~((uint64_t)0))
+#define ZdbNullRN (~static_cast<uint64_t>(0))
 #define ZdbMaxRN ZdbNullRN
 
 #define ZdbFileRecs	16384
 #define ZdbFileShift	14
 #define ZdbFileMask	0x3fffU
+
+// FIXME
+
+// new file structure with variable-length flatbuffer-format records
+
+// initial 512-byte super-block of 128 offsets, each to index-block
+// each index-block is 512-byte index of 128 record offsets
+// super-block is immediately followed by first index-block
+// each record is {length,data,magic} - data is optionally lz4 compressed
+// (compression/decompression happens on app load/save, otherwise
+// data is uninterpreted by Zdb)
+
+// prevRN is removed (explicitly added by app if needed)
+
+// record data and replication messages are flatbuffers
+
+// database ID is string (rarely used to index, so ok)
+
+// *POD (ZuPOD, ZdbPOD, etc.) all disappear - app uses lambdas
+// to save/load flatbuffer data (although can copy it directly for
+// e.g. transmission)
+
+// permit Zfb::IOBuilder to construct from IOBuf to be prepended to,
+// to allow contiguous hdr, body transmission for replication/recovery
 
 namespace ZdbOp {
   enum { Add = 0, Upd, Del };
@@ -124,11 +148,11 @@ class ZdbAny;				// individual database (generic)
 template <typename> class Zdb;		// individual database (type-specific)
 class ZdbAnyPOD;			// in-memory record (generic)
 class ZdbHost;				// host
-class Zdb_Cxn;				// cxn
+class Zdb_Cxn;				// connection
 
 class ZdbRange {
 public:
-  ZdbRange() : m_val(0) { }
+  ZdbRange() : m_val{0} { }
 
   ZdbRange(const ZdbRange &r) : m_val(r.m_val) { }
   ZdbRange &operator =(const ZdbRange &r)
@@ -212,7 +236,7 @@ private:
 };
 
 struct Zdb_File_IndexAccessor : public ZuAccessor<Zdb_File_, unsigned> {
-  ZuInline static unsigned value(const Zdb_File_ &file) {
+  static unsigned value(const Zdb_File_ &file) {
     return file.index();
   }
 };
@@ -267,7 +291,7 @@ struct ZdbTrailer {
 };
 #pragma pack(pop)
 
-struct ZdbLRU_ { }; // disambiguate from ZuNull
+struct ZdbLRU_ { };
 using ZdbLRU =
   ZmList<ZdbLRU_,
     ZmListObject<ZuShadow,
@@ -538,7 +562,7 @@ friend ZdbAnyPOD;
   struct IDAccessor;
 friend IDAccessor;
   struct IDAccessor : public ZuAccessor<ZdbAny *, ZdbID> {
-    ZuInline static ZdbID value(const ZdbAny *db) { return db->m_id; }
+    static ZdbID value(const ZdbAny *db) { return db->m_id; }
   };
 
   using Cache = Zdb_Cache;
@@ -763,7 +787,7 @@ template <typename> friend struct ZuPrint;
   struct IDAccessor;
 friend IDAccessor;
   struct IDAccessor : public ZuAccessor<ZdbHost *, int> {
-    ZuInline static int value(ZdbHost *h) { return h->id(); }
+    static int value(ZdbHost *h) { return h->id(); }
   };
 
   ZdbHost(ZdbEnv *env, const ZdbHostConfig *config);
@@ -803,7 +827,7 @@ private:
     return false;
   }
 
-  ZuInline int cmp(const ZdbHost *host) const {
+  int cmp(const ZdbHost *host) const {
     int i = m_dbState.cmp(host->m_dbState); if (i) return i;
     if (i = ZuCmp<bool>::cmp(active(), host->active())) return i;
     return ZuCmp<int>::cmp(priority(), host->priority());
@@ -824,7 +848,7 @@ private:
   }
 #endif
 
-  ZuInline void voted(bool v) { m_voted = v; }
+  void voted(bool v) { m_voted = v; }
 
   void connect();
   void connectFailed(bool transient);

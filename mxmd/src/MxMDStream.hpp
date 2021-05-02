@@ -72,7 +72,7 @@ struct App {
 namespace MxMDStream {
 
   namespace Type {
-    MxEnumerate(
+    MxEnumValues("MxMDStream.Type",
 	AddVenue,
 	AddTickSizeTbl, ResetTickSizeTbl, AddTickSize,
 	TradingSession,
@@ -93,7 +93,7 @@ namespace MxMDStream {
 	Login,			// TCP login
 	ResendReq);		// UDP resend request
 
-    MxEnumMapAlias(Map, CSVMap);
+    using CSVMap = Map;
   }
 
   struct FileHdr {

@@ -221,47 +221,46 @@ template <typename U> struct MxType :
 using MxIDString = MxString<MxIDStrSize>;
 using MxTxtString = MxString<MxTxtSize>;
 
-#define MxEnumerate ZtEnumerate
 #define MxEnumValues ZtEnumValues
 #define MxEnumNames ZtEnumNames
 #define MxEnumMap ZtEnumMap
-#define MxEnumMapAlias(Map, Alias) typedef Map Alias
 #define MxEnumFlags ZtEnumFlags
 
 // application types
 
 namespace MxInstrIDSrc {
-  MxEnumerate(
+  MxEnumValues("MxInstrIDSrc",
       CUSIP, SEDOL, QUIK, ISIN, RIC, EXCH, CTA, BSYM, BBGID, FX, CRYPTO);
-  MxEnumMapAlias(Map, CSVMap);
-  MxEnumMap(FixMap,
+  using CSVMap = Map;
+  MxEnumMap("MxInstrIDSrc.FIX", FixMap,
       "1", CUSIP, "2", SEDOL, "3", QUIK, "4", ISIN, "5", RIC, "8", EXCH,
       "9", CTA, "A", BSYM, "S", BBGID, "X", FX, "C", CRYPTO);
 }
 
 namespace MxPutCall {
-  MxEnumerate(PUT, CALL);
-  MxEnumMap(CSVMap,
+  MxEnumValues("MxPutCall", PUT, CALL);
+  MxEnumMap("MxPutCall.CSV", CSVMap,
       "P", PUT, "PUT", PUT, "Put", PUT, "0", PUT,
       "C", CALL, "CALL", CALL, "Call", CALL, "1", CALL);
-  MxEnumMap(FixMap, "0", PUT, "1", CALL);
+  MxEnumMap("MxPutCall.FIX", FixMap, "0", PUT, "1", CALL);
 }
 
 namespace MxTickDir {
-  MxEnumerate(Up, LevelUp, Down, LevelDown, NoTick);
-  MxEnumMap(CSVMap,
+  MxEnumValues("MxTickDir", Up, LevelUp, Down, LevelDown, NoTick);
+  MxEnumMap("MxTickDir.CSV", CSVMap,
       "U", Up, "0", Up,
       "UL", LevelUp, "1", LevelUp,
       "D", Down, "2", Down,
       "DL", LevelDown, "3", LevelDown);
-  MxEnumMap(FixMap, "0", Up, "1", LevelUp, "2", Down, "3", LevelDown);
+  MxEnumMap("MxTickDir.FIX", FixMap,
+      "0", Up, "1", LevelUp, "2", Down, "3", LevelDown);
 }
 
 namespace MxTradingStatus {
-  MxEnumerate(
+  MxEnumValues("MxTradingStatus", 
       Open, Closed, PreOpen, Auction,
       Halted, Resumed, NotTraded, Unwinding, Unknown);
-  MxEnumMap(CSVMap,
+  MxEnumMap("MxTradingStatus.CSV", CSVMap,
       "Open", Open, "17", Open,
       "Closed", Closed, "18", Closed,
       "PreOpen", PreOpen, "21", PreOpen,
@@ -271,16 +270,16 @@ namespace MxTradingStatus {
       "NotTraded", NotTraded, "19", NotTraded,
       "Unwinding", Unwinding, "100", Unwinding,
       "Unknown", Unknown, "20", Unknown);
-  MxEnumMap(FixMap,
+  MxEnumMap("MxTradingStatus.FIX", FixMap,
       "17", Open, "18", Closed, "21", PreOpen, "5", Auction,
       "2", Halted, "3", Resumed, "19", NotTraded, "20", Unknown);
 }
 
 namespace MxTradingSession {
-  MxEnumerate(
+  MxEnumValues("MxTradingSession", 
       PreTrading, Opening, Continuous, Closing, PostTrading,
       IntradayAuction, Quiescent);
-  MxEnumMap(CSVMap,
+  MxEnumMap("MxTradingSession.CSV", CSVMap,
       "PreTrading", PreTrading, "1", PreTrading,
       "Opening", Opening, "2", Opening,
       "Continuous", Continuous, "3", Continuous,
@@ -288,7 +287,7 @@ namespace MxTradingSession {
       "PostTrading", PostTrading, "5", PostTrading,
       "IntradayAuction", IntradayAuction, "6", IntradayAuction,
       "Quiescent", Quiescent, "7", Quiescent);
-  MxEnumMap(FixMap,
+  MxEnumMap("MxTradingSession.FIX", FixMap,
       "1", PreTrading,
       "2", Opening,
       "3", Continuous,
@@ -299,14 +298,14 @@ namespace MxTradingSession {
 }
 
 namespace MxSide {
-  MxEnumerate(Buy, Sell, SellShort, SellShortExempt, Cross);
-  MxEnumMap(CSVMap,
+  MxEnumValues("MxSide", Buy, Sell, SellShort, SellShortExempt, Cross);
+  MxEnumMap("MxSide.CSV", CSVMap,
       "Buy", Buy, "1", Buy,
       "Sell", Sell, "2", Sell,
       "SellShort", SellShort, "5", SellShort,
       "SellShortExempt", SellShortExempt, "6", SellShortExempt,
       "Cross", Cross, "8", Cross);
-  MxEnumMap(FixMap,
+  MxEnumMap("MxSide.FIX", FixMap,
       "1", Buy,
       "2", Sell,
       "5", SellShort,

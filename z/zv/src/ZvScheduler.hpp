@@ -35,16 +35,13 @@
 #include <zlib/ZvCf.hpp>
 
 namespace ZvSchedulerPriorities {
-  ZtEnumValues(
+  ZtEnumValues_(
       RealTime = ZmThreadPriority::RealTime,
       High = ZmThreadPriority::High,
       Normal = ZmThreadPriority::Normal,
       Low = ZmThreadPriority::Low);
-  ZtEnumMap(Map,
-      "RealTime", RealTime,
-      "High", High,
-      "Normal", Normal,
-      "Low", Low);
+  ZtEnumMap("ZvSchedulerPriorities", Map,
+      "RealTime", RealTime, "High", High, "Normal", Normal, "Low", Low);
 }
 
 struct ZvSchedParams : public ZmSchedParams {

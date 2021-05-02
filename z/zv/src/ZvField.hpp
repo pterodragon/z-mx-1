@@ -220,8 +220,9 @@ struct ZvFieldHex_ : public ZvField_<Base, ZvFieldType::Hex, Flags_> {
 #define ZvFieldHex(T, ID, Flags) ZvFieldHex_<ZuFieldData(T, ID), Flags>
 #define ZvFieldHexFn(T, ID, Flags) ZvFieldHex_<ZuFieldFn(T, ID), Flags>
 
-template <typename Base, unsigned Flags_, typename Map>
+template <typename Base, unsigned Flags_, typename Map_>
 struct ZvFieldEnum_ : public ZvField_<Base, ZvFieldType::Enum, Flags_> {
+  using Map = Map_;
   template <typename S>
   static void print(const void *o, S &s, const ZvFieldFmt &) {
     s << Map::instance()->v2s(Base::get(o));
@@ -235,8 +236,9 @@ struct ZvFieldEnum_ : public ZvField_<Base, ZvFieldType::Enum, Flags_> {
 #define ZvFieldEnumFn(T, ID, Flags, Map) \
   ZvFieldEnum_<ZuFieldFn(T, ID), Flags, Map>
 
-template <typename Base, unsigned Flags_, typename Map>
+template <typename Base, unsigned Flags_, typename Map_>
 struct ZvFieldFlags_ : public ZvField_<Base, ZvFieldType::Flags, Flags_> {
+  using Map = Map_;
   template <typename S>
   static void print(const void *o, S &s, const ZvFieldFmt &fmt) {
     Map::instance()->print(s, Base::get(o), fmt.flagsDelim);
@@ -292,24 +294,24 @@ struct ZvFieldTime_ : public ZvField_<Base, ZvFieldType::Time, Time_> {
 
 template <typename T> ZuTypeList<> ZvFieldList_(T *); // default
 
-#define ZvFieldDef(T_, ...)  \
+#define ZvFieldDef(V, ...)  \
   namespace { \
-    ZuPP_Eval(ZuPP_MapArg(ZuField_ID, T_, __VA_ARGS__)) \
+    ZuPP_Eval(ZuPP_MapArg(ZuField_ID, V, __VA_ARGS__)) \
   } \
-  ZuTypeList<ZuPP_Eval(ZuPP_MapArgComma(ZvField_, T_, __VA_ARGS__))> \
-  ZvFieldList_(T_ *);
+  ZuTypeList<ZuPP_Eval(ZuPP_MapArgComma(ZvField_, V, __VA_ARGS__))> \
+  ZvFieldList_(V *);
 
 template <typename T>
 using ZvFieldList = decltype(ZvFieldList_(ZuDeclVal<T *>()));
 
-template <typename Impl> struct ZvFieldTuple : public ZuPrintable {
+template <typename Impl> struct ZvFieldPrint : public ZuPrintable {
   const Impl *impl() const { return static_cast<const Impl *>(this); }
   Impl *impl() { return static_cast<Impl *>(this); }
 
-  template <typename T>
-  struct Filter { enum { OK = !(T::Flags & ZvFieldFlags::Synthetic) }; };
-  using FieldList = typename ZuTypeGrep<Filter, ZvFieldList<Impl>>::T;
   template <typename S> void print(S &s) const {
+    template <typename T>
+    struct Filter { enum { OK = !(T::Flags & ZvFieldFlags::Synthetic) }; };
+    using FieldList = typename ZuTypeGrep<Filter, ZvFieldList<Impl>>::T;
     thread_local ZvFieldFmt fmt;
     ZuTypeAll<FieldList>::invoke([ptr = impl(), &s]<typename Field>() {
       if constexpr (ZuTypeIndex<Field, FieldList>::I) s << ' ';
@@ -319,19 +321,73 @@ template <typename Impl> struct ZvFieldTuple : public ZuPrintable {
   }
 };
 
-struct ZvVField_Enum {
-  template <typename Map>
-  ZvVField_Enum(Map) : {
-    .id = []() { return ZuDemangle<200>{typeid(Map).name()}; },
-    .s2v = [](ZuString s) { return Map::instance()->s2v(s); },
-    .v2s = [](int i) { return Map::instance()->v2s(i); }
+
+template <typename V, typename FieldList>
+struct ZvFieldTuple {
+  template <typename ...Fields>
+  struct Mk_ {
+    using T = ZuTuple<typename Fields::T...>;
+    static T mk(const V &v) { return { Fields::get(&v)... }; }
+  };
+  using Mk = typename ZuTypeApply<Mk_, FieldList>::T;
+};
+
+template <typename V> struct ZvFieldKey_ {
+  template <typename T>
+  struct Filter { enum { OK = T::Flags & ZvFieldFlags::Key }; };
+  using FieldList = typename ZuTypeGrep<Filter, ZvFieldList<V>>::T;
+  using Mk = typename ZuFieldTuple<V, FieldList>::Mk;
+};
+template <typename V>
+auto ZvFieldKey(const V &v) {
+  return ZvFieldKey_<V>::Mk::mk(v);
+}
+
+// run-time introspection
+
+struct ZvVField_Enum_ {
+  const char	*(*id)();
+  int		(*s2v)(ZuString);
+  ZuString	(*v2s)(int);
+};
+template <typename Map>
+struct ZvVField_Enum : public ZvField_Enum_ {
+  ZvVField_Enum(Map) : ZvField_Enum_{
+    .id = []() -> const char * { return Map::id(); },
+    .s2v = [](ZuString s) -> int {
+      return Map::instance()->s2v(s);
+    },
+    .v2s = [](int i) -> ZuString {
+      return Map::instance()->v2s(i);
+    }
   } { }
 
-  ZuString	(*id)(); // FIXME?
-  int		(*s2v)(ZuString);
-  ZuString	(*v2s)(int); // FIXME - print?
+  static ZvVField_Enum *instance() {
+    return ZmSingleton<ZvVField_Enum>::instance();
+  }
 };
-// FIXME - ZvVField_Flags
+
+struct ZvVField_Flags_ {
+  const char	*(*id)();
+  void		(*print)(uint64_t, ZmStream &, const ZvFieldFmt &);
+  void		(*scan)(uint64_t &, ZuString, const ZvFieldFmt &);
+};
+template <typename Map>
+struct ZvVField_Flags : public ZvField_Flags_ {
+  ZvVField_Flags(Map) : ZvField_Flags_{
+    .id = []() -> const char * { return Map::id(); },
+    .print = [](uint64_t v, ZmStream &s, const ZvFieldFmt &fmt) -> void {
+      Map::instance()->print(s, v, fmt.flagsDelim);
+    },
+    .scan = [](uint64_t &v, ZuString s, const ZvFieldFmt &fmt) -> void {
+      v = Map::instance()->template scan<uint64_t>(s, fmt.flagsDelim);
+    }
+  } { }
+
+  static ZvVField_Flags *instance() {
+    return ZmSingleton<ZvVField_Flags>::instance();
+  }
+};
 
 struct ZvVField {
   const char	*id;
@@ -342,15 +398,15 @@ struct ZvVField {
 
   union {
     unsigned		exponent;	// Float|Fixed|Decimal
-    ZvVField_Enum	*(*enum_)();	// Enum
-    ZvVField_Flags	*(*flags)();	// Flags
+    ZvVField_Enum_	*(*enum_)();	// Enum
+    ZvVField_Flags_	*(*flags)();	// Flags
   } info;
 
   void		(*print)(const void *, ZmStream &, const ZvFieldFmt &);
   void		(*scan)(void *, ZuString, const ZvFieldFmt &);
   union {
     ZuString	(*string)(const void *);	// String
-    ZmStreamFn	(*compound)(const void *);	// Composite
+    ZmStreamFn	(*composite)(const void *);	// Composite
     int64_t	(*int_)(const void *);		// Bool|Int|Fixed|Hex|Enum|Flags
     double	(*float_)(const void *);	// Float
     ZuDecimal	(*decimal)(const void *);	// Decimal
@@ -391,7 +447,7 @@ struct ZvVField {
       }},
       info{.exponent = 0},
       print{Field::template print<ZmStream>}, scan{Field::scan},
-      getFn{.compound = [](const void *o) -> ZmStreamFn {
+      getFn{.composite = [](const void *o) -> ZmStreamFn {
 	using T = typename Field::T;
 	const T &v = Field::get(o);
 	return {&v, [](const T *ptr, ZmStream &s) { s << *ptr; }};
@@ -405,15 +461,41 @@ struct ZvVField {
     typename = ZuIfT<
       Field::Type == ZvFieldType::Bool ||
       Field::Type == ZvFieldType::Int ||
-      Field::Type == ZvFieldType::Hex ||
-      Field::Type == ZvFieldType::Enum ||
-      Field::Type == ZvFieldType::Flags>::T>
+      Field::Type == ZvFieldType::Hex>::T>
   ZvVField(Field) :
       id{Field::id()}, type{Field::Type}, flags{Field::Flags},
       cmp{[](const void *o1, const void *o2) {
 	return ZuCmp<typename Field::T>::cmp(Field::get(o1), Field::get(o2));
       }},
       info{.exponent = 0},
+      print{Field::template print<ZmStream>}, scan{Field::scan},
+      getFn{.int_ = [](const void *o) -> int64_t { return Field::get(o); }},
+      setFn{.int_ = [](void *o, int64_t v) { Field::set(o, v); }} { }
+
+      Field::Type == ZvFieldType::Flags
+
+  template <
+    typename Field,
+    typename = ZuIfT<Field::Type == ZvFieldType::Enum>::T>
+  ZvVField(Field) :
+      id{Field::id()}, type{Field::Type}, flags{Field::Flags},
+      cmp{[](const void *o1, const void *o2) {
+	return ZuCmp<typename Field::T>::cmp(Field::get(o1), Field::get(o2));
+      }},
+      info{.enum_ = []() { return ZvVField_Enum<Field::Map>::instance(); }},
+      print{Field::template print<ZmStream>}, scan{Field::scan},
+      getFn{.int_ = [](const void *o) -> int64_t { return Field::get(o); }},
+      setFn{.int_ = [](void *o, int64_t v) { Field::set(o, v); }} { }
+
+  template <
+    typename Field,
+    typename = ZuIfT<Field::Type == ZvFieldType::Flags>::T>
+  ZvVField(Field) :
+      id{Field::id()}, type{Field::Type}, flags{Field::Flags},
+      cmp{[](const void *o1, const void *o2) {
+	return ZuCmp<typename Field::T>::cmp(Field::get(o1), Field::get(o2));
+      }},
+      info{.flags = []() { return ZvVField_Flags<Field::Map>::instance(); }},
       print{Field::template print<ZmStream>}, scan{Field::scan},
       getFn{.int_ = [](const void *o) -> int64_t { return Field::get(o); }},
       setFn{.int_ = [](void *o, int64_t v) { Field::set(o, v); }} { }
@@ -480,7 +562,7 @@ struct ZvVField {
   }
   template <unsigned I, typename L>
   typename ZuIfT<I == ZvFieldType::Composite>::T get_(const void *o, L l) {
-    l(getFn.compound(o));
+    l(getFn.composite(o));
   }
   template <unsigned I, typename L>
   typename ZuIfT<
@@ -544,7 +626,7 @@ using ZvVFieldArray = ZuArray<ZvVField>;
 
 template <typename ...Fields>
 struct ZvMkVFields_ {
-  ZvVFieldArray fields() {
+  const ZvVFieldArray fields() {
     static ZvVField fields_[] =
       // std::initializer_list<ZvVField>
     {

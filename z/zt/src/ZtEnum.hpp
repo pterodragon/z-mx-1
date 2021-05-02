@@ -44,8 +44,28 @@
 using ZtEnum = ZuBox_1(int8_t);
 
 // ZtEnum class declaration macros
-//   Note: must use in this order: Values; Names; Map; Flags;...
-#define ZtEnumValues(...) \
+//   Note: must use in this order: Values; Map; Flags;...
+
+#define ZtEnumNames_(ID, ...) \
+  inline ZuPair<const char *const *const, unsigned> names() { \
+    static const char *names[] = { __VA_ARGS__ }; \
+    return ZuPair<const char *const *const, unsigned>( \
+	names, sizeof(names) / sizeof(names[0])); \
+  } \
+  inline const char *name(int i) { \
+    ZuPair<const char *const *const, unsigned> names_ = names(); \
+    if (i >= (int)names_.p<1>()) return "Unknown"; \
+    if (i < 0) return ""; \
+    return names_.p<0>()[i]; \
+  } \
+  struct Map : public Map_<Map> { \
+    static constexpr const char *id() { return ID; } \
+    Map() { for (unsigned i = 0; i < N; i++) this->add(name(i), i); } \
+  }; \
+  template <typename S> inline ZtEnum lookup(const S &s) { \
+    return Map::instance()->s2v(s); \
+  }
+#define ZtEnumValues_(...) \
   enum _ { Invalid = -1, __VA_ARGS__, N }; \
   ZuAssert(N <= 1024); \
   enum { Bits = \
@@ -87,34 +107,20 @@ using ZtEnum = ZuBox_1(int8_t);
   private: \
     ZmRef<S2V>	m_s2v; \
     ZmRef<V2S>	m_v2s; \
-  }
-#define ZtEnumNames(...) \
-  inline ZuPair<const char *const *const, unsigned> names() { \
-    static const char *names[] = { __VA_ARGS__ }; \
-    return ZuPair<const char *const *const, unsigned>( \
-	names, sizeof(names) / sizeof(names[0])); \
   } \
-  inline const char *name(int i) { \
-    ZuPair<const char *const *const, unsigned> names_ = names(); \
-    if (i >= (int)names_.p<1>()) return "Unknown"; \
-    if (i < 0) return ""; \
-    return names_.template p<0>()[i]; \
-  } \
+#define ZtEnumValues(ID, ...) \
+  ZtEnumValues_(__VA_ARGS__) \
+  ZtEnumNames_(ID, ZuPP_Eval(ZuPP_MapComma(ZuPP_Q, __VA_ARGS__)))
+
+#define ZtEnumMap(ID, Map, ...) \
   struct Map : public Map_<Map> { \
-    Map() { for (unsigned i = 0; i < N; i++) this->add(name(i), i); } \
-  }; \
-  template <typename S> inline ZtEnum lookup(const S &s) { \
-    return Map::instance()->s2v(s); \
-  }
-#define ZtEnumerate(...) \
-  ZtEnumValues(__VA_ARGS__); \
-  ZtEnumNames(ZuPP_Eval(ZuPP_MapComma(ZuPP_Q, __VA_ARGS__)))
-#define ZtEnumMap(Map, ...) \
-  struct Map : public Map_<Map> { \
+    static constexpr const char *id() { return ID; } \
     Map() { this->init(__VA_ARGS__, (const char *)0); } \
   }
-#define ZtEnumFlags(Map, ...) \
+
+#define ZtEnumFlags(ID, Map, ...) \
   struct Map : public Map_<Map> { \
+    static constexpr const char *id() { return ID; } \
     Map() { this->init(__VA_ARGS__, (const char *)0); } \
     template <typename S, typename Flags_> \
     unsigned print(S &s, const Flags_ &v, char delim = '|') const { \

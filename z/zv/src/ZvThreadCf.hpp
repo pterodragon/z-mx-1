@@ -37,12 +37,12 @@
 #include <zlib/ZvCf.hpp>
 
 namespace ZvThreadPriorities {
-  ZtEnumValues(
+  ZtEnumValues_(
       RealTime = ZmThreadPriority::RealTime,
       High = ZmThreadPriority::High,
       Normal = ZmThreadPriority::Normal,
       Low = ZmThreadPriority::Low);
-  ZtEnumMap(Map,
+  ZtEnumMap("ZvThreadPriorities", Map,
       "RealTime", RealTime, "High", High, "Normal", Normal, "Low", Low);
 }
 

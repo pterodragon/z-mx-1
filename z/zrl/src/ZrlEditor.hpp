@@ -270,8 +270,8 @@ struct Bindings : public Bindings_ {
 };
 
 namespace ModeType {
-  ZtEnumValues(Edit, Command, Base);
-  ZtEnumNames("edit", "command", "base");
+  ZtEnumValues_(Edit, Command, Base);
+  ZtEnumNames_("ModeType", "edit", "command", "base");
 }
 
 // line editor mode

@@ -65,15 +65,15 @@ class ZvAnyLink;
 namespace ZvTelemetry {
 
 namespace RAG {
-  ZfbEnumValues(RAG, Off, Red, Amber, Green);
+  ZfbEnumValues("RAG", Off, Red, Amber, Green);
 }
 
 namespace ThreadPriority {
-  ZfbEnumValues(ThreadPriority, RealTime, High, Normal, Low);
+  ZfbEnumValues("ThreadPriority", RealTime, High, Normal, Low);
 }
 
 namespace MxState {
-  ZfbEnumValues(MxState,
+  ZfbEnumValues("MxState",
       Stopped, Starting, Running, Draining, Drained, Stopping);
 
   int rag(int i) {
@@ -86,15 +86,15 @@ namespace MxState {
 }
 
 namespace SocketType {
-  ZfbEnumValues(SocketType, TCPIn, TCPOut, UDP);
+  ZfbEnumValues("SocketType", TCPIn, TCPOut, UDP);
 }
 
 namespace QueueType {
-  ZfbEnumValues(QueueType, Thread, IPC, Rx, Tx);
+  ZfbEnumValues("QueueType", Thread, IPC, Rx, Tx);
 }
 
 namespace LinkState {
-  ZfbEnumValues(LinkState, 
+  ZfbEnumValues("LinkState", 
     Down,
     Disabled,
     Deleted,
@@ -117,7 +117,7 @@ namespace LinkState {
 }
 
 namespace EngineState {
-  ZfbEnumValues(EngineState,
+  ZfbEnumValues("EngineState",
       Stopped, Starting, Running, Stopping,
       StartPending,		// started while stopping
       StopPending);		// stopped while starting
@@ -132,11 +132,11 @@ namespace EngineState {
 }
 
 namespace DBCacheMode {
-  ZfbEnumValues(DBCacheMode, Normal, FullCache)
+  ZfbEnumValues("DBCacheMode", Normal, FullCache)
 }
 
 namespace DBHostState {
-  ZfbEnumValues(DBHostState,
+  ZfbEnumValues("DBHostState",
       Instantiated,
       Initialized,
       Stopped,
@@ -157,17 +157,17 @@ namespace DBHostState {
 }
 
 namespace AppRole {
-  ZfbEnumValues(AppRole, Dev, Test, Prod)
+  ZfbEnumValues("AppRole", Dev, Test, Prod)
 }
 
 namespace Severity {
-  ZfbEnumValues(Severity, Debug, Info, Warning, Error, Fatal)
+  ZfbEnumValues("Severity", Debug, Info, Warning, Error, Fatal)
 }
 
 template <typename> struct load;
 
 using Heap_ = ZmHeapTelemetry;
-struct Heap : public Heap_, public ZvFieldTuple<Heap> {
+struct Heap : public Heap_, public ZvFieldPrint<Heap> {
   using FBS = fbs::Heap;
   static const ZvFieldArray fields() noexcept;
   using Key = ZuTuple<decltype(id), decltype(partition), decltype(size)>;
@@ -208,8 +208,7 @@ struct Heap : public Heap_, public ZvFieldTuple<Heap> {
   }
   void loadDelta(const fbs::Heap *);
 };
-inline const ZvFieldArray Heap::fields() noexcept {
-  ZvFields(Heap,
+  ZvFBFieldDef(Heap,
       (String, id, 0),
       (Int, size, 0),
       (Int, alignment, 0),
@@ -251,7 +250,7 @@ inline void Heap::loadDelta(const fbs::Heap *heap_) {
 }
 
 using HashTbl_ = ZmHashTelemetry;
-struct HashTbl : public HashTbl_, public ZvFieldTuple<HashTbl> {
+struct HashTbl : public HashTbl_, public ZvFieldPrint<HashTbl> {
   using FBS = fbs::HashTbl;
   static const ZvFieldArray fields() noexcept;
   using Key = ZuTuple<decltype(id), decltype(addr)>;
@@ -325,7 +324,7 @@ inline void HashTbl::loadDelta(const fbs::HashTbl *hash_) {
 }
 
 using Thread_ = ZmThreadTelemetry;
-struct Thread : public Thread_, public ZvFieldTuple<Thread> {
+struct Thread : public Thread_, public ZvFieldPrint<Thread> {
   using FBS = fbs::Thread;
   static const ZvFieldArray fields() noexcept;
   using Key = ZuTuple<decltype(tid)>;
@@ -398,7 +397,7 @@ inline void Thread::loadDelta(const fbs::Thread *thread_) {
 }
 
 using Mx_ = ZiMxTelemetry;
-struct Mx : public Mx_, public ZvFieldTuple<Mx> {
+struct Mx : public Mx_, public ZvFieldPrint<Mx> {
   using FBS = fbs::Mx;
   static const ZvFieldArray fields() noexcept;
   using Key = ZuTuple<decltype(id)>;
@@ -475,7 +474,7 @@ inline void Mx::loadDelta(const fbs::Mx *mx_) {
 }
 
 using Socket_ = ZiCxnTelemetry;
-struct Socket : public Socket_, public ZvFieldTuple<Socket> {
+struct Socket : public Socket_, public ZvFieldPrint<Socket> {
   using FBS = fbs::Socket;
   static const ZvFieldArray fields() noexcept;
   using Key = ZuTuple<decltype(socket)>;
@@ -567,7 +566,7 @@ inline void Socket::loadDelta(const fbs::Socket *socket_) {
 // display sequence:
 //   id, type, size, full, count, seqNo,
 //   inCount, inBytes, outCount, outBytes
-struct Queue : public ZvFieldTuple<Queue> {
+struct Queue : public ZvFieldPrint<Queue> {
   ZuID		id;		// primary key - same as Link id for Rx/Tx
   uint64_t	seqNo = 0;	// 0 for Thread, IPC
   uint64_t	count = 0;	// dynamic - may not equal in - out
@@ -664,7 +663,7 @@ inline void Queue::loadDelta(const fbs::Queue *queue_) {
 
 // display sequence:
 //   id, state, reconnects, rxSeqNo, txSeqNo
-struct Link : public ZvFieldTuple<Link> {
+struct Link : public ZvFieldPrint<Link> {
   ZuID		id;
   ZuID		engineID;
   uint64_t	rxSeqNo = 0;
@@ -738,7 +737,7 @@ inline void Link::loadDelta(const fbs::Link *link_) {
   state = link_->state();
 }
 
-struct Engine : public ZvFieldTuple<Engine> {
+struct Engine : public ZvFieldPrint<Engine> {
   ZuID		id;		// primary key
   ZuID		type;
   ZuID		mxID;
@@ -842,7 +841,7 @@ inline void Engine::loadDelta(const fbs::Engine *engine_) {
 //   path, fileSize, fileRecs, filesMax, preAlloc,
 //   minRN, nextRN, fileRN,
 //   cacheLoads, cacheMisses, fileLoads, fileMisses
-struct DB : public ZvFieldTuple<DB> {
+struct DB : public ZvFieldPrint<DB> {
   using Path = ZuStringN<124>;
   using Name = ZuStringN<28>;
 
@@ -967,7 +966,7 @@ inline void DB::loadDelta(const fbs::DB *db_) {
 
 // display sequence:
 //   id, priority, state, voted, ip, port
-struct DBHost : public ZvFieldTuple<DBHost> {
+struct DBHost : public ZvFieldPrint<DBHost> {
   ZiIP		ip;
   uint32_t	id = 0;
   uint32_t	priority = 0;
@@ -1037,7 +1036,7 @@ inline void DBHost::loadDelta(const fbs::DBHost *host_) {
 //   nDBs, nHosts, nPeers, nCxns,
 //   heartbeatFreq, heartbeatTimeout, reconnectFreq, electionTimeout,
 //   writeThread
-struct DBEnv : public ZvFieldTuple<DBEnv> {
+struct DBEnv : public ZvFieldPrint<DBEnv> {
   uint32_t	nCxns = 0;
   uint32_t	heartbeatFreq = 0;
   uint32_t	heartbeatTimeout = 0;
@@ -1150,124 +1149,43 @@ inline void DBEnv::loadDelta(const fbs::DBEnv *env_) {
 
 // display sequence:
 //   id, role, RAG, uptime, version
-struct App : public ZvFieldTuple<App> {
+struct App : public ZvFieldPrint<App> {
   ZmIDString	id;
   ZmIDString	version;
   ZtDate	uptime;
   int8_t	role = -1;
-  int8_t	rag_ = -1;
-
-  using FBS = fbs::App;
-  static const ZvFieldArray fields() noexcept;
-
-  int rag() const { return rag_; }
-  void rag(int v) { rag_ = v; }
-
-  Zfb::Offset<fbs::App> save(Zfb::Builder &fbb) const {
-    using namespace Zfb::Save;
-    return fbs::CreateApp(fbb,
-	str(fbb, id), str(fbb, version), dateTime(fbb, uptime),
-	static_cast<fbs::AppRole>(role),
-	static_cast<fbs::RAG>(rag_));
-  }
-  Zfb::Offset<fbs::App> saveDelta(Zfb::Builder &fbb) const {
-    using namespace Zfb::Save;
-    auto id_ = str(fbb, id);
-    auto uptime_ = dateTime(fbb, uptime);
-    fbs::AppBuilder b(fbb);
-    b.add_id(id_);
-    b.add_uptime(uptime_);
-    b.add_rag(static_cast<fbs::RAG>(rag_));
-    return b.Finish();
-  }
-  void loadDelta(const fbs::App *);
+  int8_t	rag = -1;
 };
-inline const ZvFieldArray App::fields() noexcept {
-  ZvFields(App,
-      (String, id, 0),
-      (String, version, 0),
-      (Time, uptime, 0),
-      (Enum, role, 0, AppRole::Map),
-      (Enum, rag_, 0, RAG::Map));
-}
-template <> struct load<App> : public App {
-  load() = default;
-  load(const load &) = default;
-  load(load &&) = default;
-  load(const fbs::App *app_) : App{
-    .id = Zfb::Load::str(app_->id()),
-    .version = Zfb::Load::str(app_->version()),
-    .uptime = Zfb::Load::dateTime(app_->uptime()),
-    .role = static_cast<int8_t>(app_->role()),
-    .rag_ = static_cast<int8_t>(app_->rag())
-  } { }
-};
-inline void App::loadDelta(const fbs::App *app_) {
-  if (Zfb::IsFieldPresent(app_, fbs::App::VT_VERSION)) {
-    this->~App();
-    new (this) load<App>{app_};
-    return;
-  }
-  uptime = Zfb::Load::dateTime(app_->uptime());
-  rag_ = app_->rag();
-}
+ZvFBFieldDef(App,
+    (String, id, Primary),
+    (String, version, 0),
+    (Time, uptime, Update),
+    (Enum, role, 0, AppRole::Map),
+    (Enum, rag, Update, RAG::Map));
 
 // display sequence:
 //   time, severity, tid, message
-struct Alert : public ZvFieldTuple<Alert> {
+struct Alert : public ZvFieldPrint<Alert> {
   ZtDate	time;
   uint32_t	seqNo = 0;
   uint32_t	tid = 0;
   int8_t	severity = -1;
   ZtString	message;
-
-  using FBS = fbs::Alert;
-  static const ZvFieldArray fields() noexcept;
-
-  Zfb::Offset<fbs::Alert> save(Zfb::Builder &fbb) const {
-    using namespace Zfb::Save;
-    return fbs::CreateAlert(fbb,
-	dateTime(fbb, time), seqNo, tid,
-	static_cast<fbs::Severity>(severity),
-	str(fbb, message));
-  }
-  Zfb::Offset<fbs::Alert> saveDelta(Zfb::Builder &fbb) const {
-    return save(fbb);
-  }
-  void loadDelta(const fbs::Alert *);
 };
-inline const ZvFieldArray Alert::fields() noexcept {
-  ZvFields(Alert,
-      (Time, time, 0),
-      (Int, seqNo, 0),
-      (Int, tid, 0),
-      (Enum, severity, 0, Severity::Map),
-      (String, message, 0));
-}
-template <> struct load<Alert> : public Alert {
-  load() = default;
-  load(const load &) = default;
-  load(load &&) = default;
-  load(const fbs::Alert *alert_) : Alert{
-    .time = Zfb::Load::dateTime(alert_->time()),
-    .seqNo = alert_->seqNo(),
-    .tid = alert_->tid(),
-    .severity = static_cast<int8_t>(alert_->severity()),
-    .message = Zfb::Load::str(alert_->message())
-  } { }
-};
-inline void Alert::loadDelta(const fbs::Alert *alert_) {
-  this->~Alert();
-  new (static_cast<void *>(this)) load<Alert>{alert_};
-}
+ZvFBFieldDef(Alert,
+    (Time, time, 0),
+    (Int, seqNo, 0),
+    (Int, tid, 0),
+    (Enum, severity, 0, Severity::Map),
+    (String, message, 0));
 
 namespace ReqType {
-  ZfbEnumValues(ReqType,
+  ZfbEnumValues("ReqType",
       Heap, HashTbl, Thread, Mx, Queue, Engine, DBEnv, App, Alert);
 }
 
 namespace TelData {
-  ZfbEnumUnion(TelData,
+  ZfbEnumUnion("TelData",
       Heap, HashTbl, Thread, Mx, Socket, Queue, Engine, Link,
       DB, DBHost, DBEnv, App, Alert);
 }

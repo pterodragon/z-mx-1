@@ -23,14 +23,14 @@ static const char *testdata =
   "-->\",\"<--,3,N,3.1415926,\"experience\"\"\",,Flag1,,,\n";
 
 namespace Enums {
-  ZtEnumValues(Sasha = 1, Grey, Girlfriend = 43, Experience, __);
-  ZtEnumMap(Map,
+  ZtEnumValues_(Sasha = 1, Grey, Girlfriend = 43, Experience, __);
+  ZtEnumMap("Enums", Map,
       "sasha", 1, "grey", 42, "\"girlfriend", 43, "experience\"", 44, "", 45);
 }
 
 namespace DaFlags {
-  ZtEnumValues(Flag1, Flag2, P, SUP);
-  ZtEnumFlags(Map, "Flag1", 0, "Flag2", 1, "P", 2, "SUP", 3);
+  ZtEnumValues_(Flag1, Flag2, P, SUP);
+  ZtEnumFlags("DaFlags", Map, "Flag1", 0, "Flag2", 1, "P", 2, "SUP", 3);
 }
 
 struct Row {

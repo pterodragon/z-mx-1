@@ -14,16 +14,17 @@
 #include <zlib/ZvCSV.hpp>
 
 namespace Snafus {
-  ZtEnumValues(
+  ZtEnumValues_(
       Sasha = 1, Grey = 42, Girlfriend = 43, Experience = 44, TigerWoods = 45);
-  ZtEnumMap(Map,
+  ZtEnumMap("Snafus", Map,
       "sasha", 1, "grey", 42, "girlfriend", 43, "experience", 44,
       "tiger-woods", 45);
 }
 
 namespace DaFlags {
-  ZtEnumValues(S, A, P, SUP, HI);
-  ZtEnumFlags(Map, "S", S, "A", A, "P", P, "SUP", SUP, "HI", HI);
+  ZtEnumValues_(S, A, P, SUP, HI);
+  ZtEnumFlags("DaFlags", Map,
+      "S", S, "A", A, "P", P, "SUP", SUP, "HI", HI);
 }
 
 struct Row {

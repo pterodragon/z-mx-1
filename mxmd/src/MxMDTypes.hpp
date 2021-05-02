@@ -135,19 +135,19 @@ typedef MxString<12> MxMDFlagsStr;
 // venue order ID scope
 
 namespace MxMDOrderIDScope {
-  MxEnumerate(Venue, OrderBook, OBSide);
+  MxEnumValues("MxMDOrderIDScope", Venue, OrderBook, OBSide);
   enum { Default = Venue };
-  MxEnumMapAlias(Map, CSVMap);
+  using CSVMap = Map;
 }
 
 // venue flags
 
 namespace MxMDVenueFlags {
-  MxEnumerate(
+  MxEnumValues("MxMDVenueFlags_",
       UniformRanks,		// order ranks are uniformly distributed
       Dark,			// lit if not dark
       Synthetic);		// synthetic (aggregated from input venues)
-  MxEnumFlags(Flags,
+  MxEnumFlags("MxMDVenueFlags", Flags,
       "UniformRanks", UniformRanks,
       "Dark", Dark,
       "Synthetic", Synthetic);

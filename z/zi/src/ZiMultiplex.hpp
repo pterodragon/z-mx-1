@@ -241,7 +241,7 @@ template <> struct ZuPrint<ZiMReq> : public ZuPrintFn { };
 
 // protocol/socket options
 namespace ZiCxnFlags {
-  ZtEnumerate(
+  ZtEnumValues_(
     UDP,		// U - create UDP socket (default TCP)
     Multicast,          // M - combine with U for multicast server socket
     LoopBack,		// L - combine with M and U for multicast loopback
@@ -249,7 +249,7 @@ namespace ZiCxnFlags {
     NetLink,		// N - NetLink socket
     Nagle		// D - enable Nagle algorithm (no TCP_NODELAY)
   );
-  ZtEnumFlags(Flags,
+  ZtEnumFlags("ZiCxnFlags", Map,
       "U", UDP, "M", Multicast, "L", LoopBack, "L", KeepAlive, "N", NetLink,
       "D", Nagle);
 }

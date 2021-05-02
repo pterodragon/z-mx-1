@@ -317,6 +317,7 @@ namespace Load {
     } \
     void add(ZuString s, ZtEnum v) { m_s2v->add(s, v); } \
   public: \
+    static constexpr const char *id() { return #Enum; } \
     using FBS = fbs::Enum; \
     Map_() { m_s2v = new S2V(); } \
     static T *instance() { return ZmSingleton<T>::instance(); } \
@@ -343,8 +344,8 @@ namespace Load {
 #define ZfbEnum_Type(T) fbs::T
 #define ZfbEnum_Assert(T) \
   ZuAssert(static_cast<int>(T) == static_cast<int>(TypeIndex<fbs::T>::I));
-#define ZfbEnumUnion(Enum, First_, ...) \
-  ZfbEnumValues(Enum, First_, __VA_ARGS__) \
+#define ZfbEnumUnion(ID, First_, ...) \
+  ZfbEnumValues(ID, First_, __VA_ARGS__) \
   enum { First = First_ }; \
   using TypeList = ZuTypeList< \
     ZuPP_Eval(ZuPP_MapComma(ZfbEnum_Type, First_, __VA_ARGS__))>; \

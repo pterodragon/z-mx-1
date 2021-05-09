@@ -67,7 +67,7 @@ namespace ZmThreadPriority {
 using ZmThreadName = ZuStringN<28>;
 
 // display sequence:
-//   name, id, tid, cpuUsage, cpuset, priority, sysPriority,
+//   name, index, tid, cpuUsage, cpuset, priority, sysPriority,
 //   stackSize, partition, main, detached
 struct ZmThreadTelemetry {
   ZmThreadName	name;

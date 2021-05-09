@@ -261,8 +261,8 @@ private:
 template <typename T>
 const ZvVFieldArray fields() {
   template <typename Field>
-  struct Filter { enum { OK = (Field::Flags & ZvFieldFlags::Series) }; };
-  using Fields = typename ZuTypeGrep<Filter, ZvFields<T>>::T;
+  struct SeriesOK { enum { OK = (Field::Flags & ZvFieldFlags::Series) }; };
+  using Fields = typename ZuTypeGrep<SeriesOK, ZvFields<T>>::T;
   return ZvMkVFields<Fields>();
 }
 

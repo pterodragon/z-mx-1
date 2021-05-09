@@ -77,22 +77,22 @@ struct ZuField_ : public ID, public Accessor { };
   ZuField_<T, T##_##ID, ZuFieldData_<&T::ID>>
 #define ZuFieldFn(T, ID) \
   ZuField_<T, T##_##ID, \
-  ZuFieldFn_<ZuFieldFn_Get(&T::ID), ZuFieldFn_Set(&T::ID)>>
+    ZuFieldFn_<ZuFieldFn_Get(&T::ID), ZuFieldFn_Set(&T::ID)>>
 
-#define ZuField_ID_(T, type, ID, ...) ZuFieldID(T, ID)
-#define ZuField_ID(T, args) ZuPP_Defer(ZuField_ID_)(T, ZuPP_Strip(args))
+#define ZuField_ID_(T, Type, ID, ...) ZuFieldID(T, ID)
+#define ZuField_ID(T, Args) ZuPP_Defer(ZuField_ID_)(T, ZuPP_Strip(Args))
 
-#define ZuField_T_(T, type, ...) ZuField##type(T, __VA_ARGS__)
-#define ZuField_T(T, args) ZuPP_Defer(ZuField_T_)(T, ZuPP_Strip(args))
+#define ZuField_T_(T, Type, ...) ZuField##Type(T, __VA_ARGS__)
+#define ZuField_T(T, Args) ZuPP_Defer(ZuField_T_)(T, ZuPP_Strip(Args))
 
 template <typename T> ZuTypeList<> ZuFields_(T *); // default
 
-#define ZuFieldDef(T_, ...) \
+#define ZuFields(U, ...) \
   namespace { \
-    ZuPP_Eval(ZuPP_MapArg(ZuField_ID, T_, __VA_ARGS__)) \
+    ZuPP_Eval(ZuPP_MapArg(ZuField_ID, U, __VA_ARGS__)) \
   } \
-  ZuTypeList<ZuPP_Eval(ZuPP_MapArgComma(ZuField_T, T_, __VA_ARGS__))> \
-  ZuFields_(T_ *);
+  ZuTypeList<ZuPP_Eval(ZuPP_MapArgComma(ZuField_T, U, __VA_ARGS__))> \
+  ZuFields_(U *);
 
 template <typename T> using ZuFields = decltype(ZuFields_(ZuDeclVal<T *>()));
 

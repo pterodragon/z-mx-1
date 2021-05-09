@@ -243,6 +243,12 @@ template <typename T_> struct ZuMvCp {
 // type list
 template <typename ...Args> struct ZuTypeList {
   enum { N = sizeof...(Args) };
+  template <typename ...Args_> struct Prepend {
+    using T = ZuTypeList<Args_..., Args...>;
+  };
+  template <typename ...Args_> struct Prepend<ZuTypeList<Args_...>> {
+    using T = ZuTypeList<Args_..., Args...>;
+  };
   template <typename ...Args_> struct Append {
     using T = ZuTypeList<Args..., Args_...>;
   };
@@ -339,6 +345,110 @@ struct ZuTypeReduce<Reduce, T0, T1, Args...> {
 template <template <typename...> class Reduce, typename ...Args>
 struct ZuTypeReduce<Reduce, ZuTypeList<Args...>> :
   public ZuTypeReduce<Reduce, Args...> { };
+
+// split typelist left, 0..N-1
+template <unsigned N, typename ...Args> struct ZuTypeLeft;
+template <unsigned N, typename Arg0, typename ...Args>
+struct ZuTypeLeft<N, Arg0, Args...> {
+  using T = typename ZuTypeLeft<N - 1, Args...>::T::Prepend<Arg0>::T;
+};
+template <typename Arg0, typename ...Args>
+struct ZuTypeLeft<0, Arg0, Args...> {
+  using T = ZuTypeList<>;
+};
+template <typename ...Args>
+struct ZuTypeLeft<0, Args...> {
+  using T = ZuTypeList<>;
+};
+template <unsigned N, typename ...Args>
+struct ZuTypeLeft<N, ZuTypeList<Args...>> : public ZuTypeLeft<N, Args...> { };
+
+// split typelist right, N..
+template <unsigned N, typename ...Args> struct ZuTypeRight;
+template <unsigned N, typename Arg0, typename ...Args>
+struct ZuTypeRight<N, Arg0, Args...> {
+  using T = typename ZuTypeRight<N - 1, Args...>::T;
+};
+template <typename Arg0, typename ...Args>
+struct ZuTypeRight<0, Arg0, Args...> {
+  using T = ZuTypeList<Arg0, Args...>;
+};
+template <typename ...Args>
+struct ZuTypeRight<0, Args...> {
+  using T = ZuTypeList<Args...>;
+};
+template <unsigned N, typename ...Args>
+struct ZuTypeRight<N, ZuTypeList<Args...>> : public ZuTypeRight<N, Args...> { };
+
+// compile-time merge sort typelist using Index<T>::I
+template <template <typename> class Index, typename Left, typename Right>
+struct ZuTypeMerge;
+template <template <typename> class, typename, typename, bool>
+struct ZuTypeMerge_;
+template <
+  template <typename> class Index,
+  typename LeftArg0, typename ...LeftArgs,
+  typename RightArg0, typename ...RightArgs>
+struct ZuTypeMerge_<Index,
+    ZuTypeList<LeftArg0, LeftArgs...>,
+    ZuTypeList<RightArg0, RightArgs...>, false> {
+  using T = typename ZuTypeMerge<Index,
+    ZuTypeList<LeftArgs...>,
+    ZuTypeList<RightArg0, RightArgs...>>::T::Prepend<LeftArg0>::T;
+};
+template <
+  template <typename> class Index,
+  typename LeftArg0, typename ...LeftArgs,
+  typename RightArg0, typename ...RightArgs>
+struct ZuTypeMerge_<Index,
+    ZuTypeList<LeftArg0, LeftArgs...>,
+    ZuTypeList<RightArg0, RightArgs...>, true> {
+  using T = typename ZuTypeMerge<Index,
+    ZuTypeList<LeftArg0, LeftArgs...>,
+    ZuTypeList<RightArgs...>>::T::Prepend<RightArg0>::T;
+};
+template <
+  template <typename> class Index,
+  typename LeftArg0, typename ...LeftArgs,
+  typename RightArg0, typename ...RightArgs>
+struct ZuTypeMerge<Index,
+  ZuTypeList<LeftArg0, LeftArgs...>,
+  ZuTypeList<RightArg0, RightArgs...>> :
+    public ZuTypeMerge_<Index, 
+      ZuTypeList<LeftArg0, LeftArgs...>,
+      ZuTypeList<RightArg0, RightArgs...>,
+      (Index<LeftArg0>::I > Index<RightArg0>::I)> { };
+template <template <typename> class Index, typename ...Args>
+struct ZuTypeMerge<Index, ZuTypeList<>, ZuTypeList<Args...>> {
+  using T = ZuTypeList<Args...>;
+};
+template <template <typename> class Index, typename ...Args>
+struct ZuTypeMerge<Index, ZuTypeList<Args...>, ZuTypeList<>> {
+  using T = ZuTypeList<Args...>;
+};
+template <template <typename> class Index>
+struct ZuTypeMerge<Index, ZuTypeList<>, ZuTypeList<>> {
+  using T = ZuTypeList<>;
+};
+template <template <typename> class Index, typename ...Args>
+struct ZuTypeSort {
+  enum { N = sizeof...(Args) };
+  using T = typename ZuTypeMerge<Index,
+    typename ZuTypeSort<Index, typename ZuTypeLeft<(N>>1), Args...>::T>::T,
+    typename ZuTypeSort<Index, typename ZuTypeRight<(N>>1), Args...>::T>::T
+  >::T;
+};
+template <template <typename> class Index, typename Arg0>
+struct ZuTypeSort<Index, Arg0> {
+  using T = ZuTypeList<Arg0>;
+};
+template <template <typename> class Index>
+struct ZuTypeSort<Index> {
+  using T = ZuTypeList<>;
+};
+template <template <typename> class Index, typename ...Args>
+struct ZuTypeSort<Index, ZuTypeList<Args...>> :
+    public ZuTypeSort<Index, Args...> { };
 
 // apply typelist to template
 template <template <typename...> class Type, typename ...Args>

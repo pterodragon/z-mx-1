@@ -7,6 +7,8 @@
 #include <time.h>
 #include <stdio.h>
 
+#include <iostream>
+
 #include <zlib/ZuArrayN.hpp>
 #include <zlib/ZuSort.hpp>
 

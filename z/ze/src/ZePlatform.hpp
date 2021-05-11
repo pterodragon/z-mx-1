@@ -72,7 +72,7 @@
 #define ZeLog_BUFSIZ (32<<10)	// caps individual log message size to 32k
 
 namespace Ze {
-  ZtEnumerate(Debug, Info, Warning, Error, Fatal);
+  ZtEnumValues("Ze", Debug, Info, Warning, Error, Fatal);
 }
 
 struct ZeAPI ZePlatform_ {
@@ -80,17 +80,17 @@ struct ZeAPI ZePlatform_ {
   using ErrNo = int;
   static constexpr ErrNo OK = 0;
 
-  ZuInline static ErrNo errNo() { return errno; }
-  ZuInline static ErrNo sockErrNo() { return errno; }
-  ZuInline static const char *strerror(ErrNo e) {
+  static ErrNo errNo() { return errno; }
+  static ErrNo sockErrNo() { return errno; }
+  static const char *strerror(ErrNo e) {
     return e >= 0 ? ::strerror(e) : gai_strerror(e);
   }
 #else
   using ErrNo = DWORD;				// <= sizeof(int)
   static constexpr ErrNo OK = ERROR_SUCCESS;	// == 0
 
-  ZuInline static ErrNo errNo() { return GetLastError(); }
-  ZuInline static ErrNo sockErrNo() { return WSAGetLastError(); }
+  static ErrNo errNo() { return GetLastError(); }
+  static ErrNo sockErrNo() { return WSAGetLastError(); }
   static const char *strerror(ErrNo e);
 #endif
 };
@@ -107,18 +107,18 @@ public:
   ZeError(ZeError &&) = default;
   ZeError &operator =(ZeError &&) = default;
 
-  ZuInline ZeError(ErrNo e) : m_errNo(e) { }
-  ZuInline ZeError &operator =(ErrNo e) {
+  ZeError(ErrNo e) : m_errNo(e) { }
+  ZeError &operator =(ErrNo e) {
     m_errNo = e;
     return *this;
   }
 
-  ZuInline ErrNo errNo() const { return m_errNo; }
-  ZuInline const char *message() const {
+  ErrNo errNo() const { return m_errNo; }
+  const char *message() const {
     return ZePlatform_::strerror(m_errNo);
   }
 
-  ZuInline bool operator !() const { return m_errNo == OK; }
+  bool operator !() const { return m_errNo == OK; }
   ZuOpBool
 
   template <typename S> ZuInline void print(S &s) const { s << message(); }
@@ -146,15 +146,15 @@ class ZeMessageFn_ : public ZmFn<const Event &, ZmStream &> {
 public:
   using Fn = ZmFn<const Event &, ZmStream &>;
 
-  ZuInline ZeMessageFn_() { }
-  ZuInline ZeMessageFn_(const ZeMessageFn_ &fn) : Fn(fn) { }
-  ZuInline ZeMessageFn_ &operator =(const ZeMessageFn_ &fn) {
+  ZeMessageFn_() { }
+  ZeMessageFn_(const ZeMessageFn_ &fn) : Fn(fn) { }
+  ZeMessageFn_ &operator =(const ZeMessageFn_ &fn) {
     Fn::operator =(fn);
     return *this;
   }
-  ZuInline ZeMessageFn_(ZeMessageFn_ &&fn) noexcept :
+  ZeMessageFn_(ZeMessageFn_ &&fn) noexcept :
     Fn(static_cast<Fn &&>(fn)) { }
-  ZuInline ZeMessageFn_ &operator =(ZeMessageFn_ &&fn) noexcept {
+  ZeMessageFn_ &operator =(ZeMessageFn_ &&fn) noexcept {
     Fn::operator =(static_cast<Fn &&>(fn));
     return *this;
   }
@@ -181,20 +181,20 @@ private:
 public:
   // from string literal
   template <typename P>
-  ZuInline ZeMessageFn_(P &&p, typename MatchLiteral<P>::T *_ = 0) :
+  ZeMessageFn_(P &&p, typename MatchLiteral<P>::T *_ = 0) :
     Fn([p = ZuString(p)](const Event &, ZmStream &s) { s << p; }) { }
 
   // from something printable (that's not a string literal)
   template <typename P>
-  ZuInline ZeMessageFn_(P &&p, typename MatchPrint<P>::T *_ = 0) :
+  ZeMessageFn_(P &&p, typename MatchPrint<P>::T *_ = 0) :
     Fn([p = ZuFwd<P>(p)](const Event &, ZmStream &s) { s << p; }) { }
 
   // fwd anything else to ZmFn
   template <typename P>
-  ZuInline ZeMessageFn_(P &&p, typename MatchFn<P>::T *_ = 0) :
+  ZeMessageFn_(P &&p, typename MatchFn<P>::T *_ = 0) :
     Fn(ZuFwd<P>(p)) { }
   template <typename P1, typename P2, typename ...Args>
-  ZuInline ZeMessageFn_(P1 &&p1, P2 &&p2, Args &&... args) :
+  ZeMessageFn_(P1 &&p1, P2 &&p2, Args &&... args) :
     Fn(ZuFwd<P1>(p1), ZuFwd<P2>(p2), ZuFwd<Args>(args)...) { }
 };
 

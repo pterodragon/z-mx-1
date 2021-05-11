@@ -58,7 +58,7 @@ namespace Zrl {
 
 // a virtual key is UTF32 if positive, otherwise -ve the VKey enum value
 namespace VKey {
-  ZtEnumerate(
+  ZtEnumValues("Zrl.VKey",
     // terminal driver events and control keys (from termios)
     _,			// unused - overlaps with ^@ when negated
 

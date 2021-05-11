@@ -92,8 +92,9 @@ template <typename T> ZuTypeList<> ZuFields_(T *); // default
     ZuPP_Eval(ZuPP_MapArg(ZuField_ID, U, __VA_ARGS__)) \
   } \
   ZuTypeList<ZuPP_Eval(ZuPP_MapArgComma(ZuField_T, U, __VA_ARGS__))> \
-  ZuFields_(U *);
+  ZuFieldList_(U *);
 
-template <typename T> using ZuFields = decltype(ZuFields_(ZuDeclVal<T *>()));
+template <typename T>
+using ZuFieldList = decltype(ZuFieldList_(ZuDeclVal<T *>()));
 
 #endif /* ZuField_HPP */

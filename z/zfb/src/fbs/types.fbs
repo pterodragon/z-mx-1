@@ -8,3 +8,6 @@ struct DateTime {
   sec:int32;
   nsec:int32;
 }
+struct IP {
+  addr:uint32;
+}

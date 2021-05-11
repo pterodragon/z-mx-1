@@ -72,7 +72,7 @@ namespace MxTEventType {
 // Note: Pending causes Pending New/Modify instead of Ordered/Modified
 // when processing modify-on-queue; Ack is overloaded to specify fill target
 namespace MxTEventFlags { // event flags
-  MxEnumValues(
+  MxEnumValues("MxTEventFlags",
       Rx,		// received (cleared before each txn)
       Tx,		// transmitted (cleared before each txn)
       Ack,		// OMC - acknowledged (cleared before each txn)
@@ -250,7 +250,7 @@ template <typename AppTypes> struct MxTAppTypes {
 	<< " eventState=" << MxTEventState::name(eventState)
 	<< " eventLeg=" << eventLeg
 	<< " eventFlags=";
-      MxTEventFlags::Flags::instance()->print(s, eventFlags);
+      MxTEventFlags::Map::instance()->print(s, eventFlags);
     }
   };
 #pragma pack(pop)

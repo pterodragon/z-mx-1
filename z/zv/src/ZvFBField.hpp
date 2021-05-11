@@ -37,24 +37,28 @@
 template <typename T> void *ZvFBB_(T *);
 template <typename T> void *ZvFBS_(T *);
 
-template <typename T> using ZvFBB = decltype(*ZvFBB_(ZuDeclVal<T *>()));
-template <typename T> using ZvFBS = decltype(*ZvFBS_(ZuDeclVal<T *>()));
+template <typename T>
+using ZvFBB = typename ZuDecay<decltype(*ZvFBB_(ZuDeclVal<T *>()))>::T;
+template <typename T>
+using ZvFBS = typename ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>::T;
 
-#define ZvFBField_Name_(T, Type, ID, ...) T##_##ID##_FB
-#define ZvFBField_Name(T, Args) ZuPP_Defer(ZvFBField_Name_)(T, ZuPP_Strip(Args))
+#define ZvFBField_Name_(U, Type, ID, ...) U##_##ID##_FB
+#define ZvFBField_Name(U, Args) ZuPP_Defer(ZvFBField_Name_)(U, ZuPP_Strip(Args))
 
-#define ZvFBField_Composite(T, Type, Fn, ID, Flags, SaveFn, LoadFn) \
-  struct ZvFBField_Name_(T, Type, ID) : \
-      public ZvField##Type##Fn(T, ID, Flags) { \
-    using Base = ZvField##Type(T, ID, Flags); \
-    using FBB = ZvFBB<T>; \
-    using FBS = ZvFBS<T>; \
+#define ZvFBField_Composite_(U, Type, Fn, ID, Flags, SaveFn, LoadFn) \
+  struct ZvFBField_Name_(U, Type, ID) : \
+      public ZvField##Type##Fn(U, ID, Flags) { \
+    using Base = ZvField##Type##Fn(U, ID, Flags); \
+    using T = typename Base::T; \
+    using FBB = ZvFBB<U>; \
+    using FBS = ZvFBS<U>; \
+    enum { Inline = 0 }; \
     static Zfb::Offset<void> save(Zfb::Builder &fbb, const void *o) { \
       using namespace Zfb::Save; \
-      return SaveFn(fbb, Base::get(o)); \
+      return SaveFn(fbb, Base::get(o)).Union(); \
     } \
     static void save(FBB &fbb, Zfb::Offset<void> offset) { \
-      fbb.add_##ID(Zfb::Offset<ZvFBS<typename Base::T>>{offset.o}); \
+      fbb.add_##ID(offset.o); \
     } \
     static auto load_(const FBS *o_) { \
       using namespace Zfb::Load; \
@@ -63,47 +67,89 @@ template <typename T> using ZvFBS = decltype(*ZvFBS_(ZuDeclVal<T *>()));
     static void load(void *o, const FBS *o_) { Base::set(o, load_(o_)); } \
   };
 
-#define ZvFBFieldString(T, ID, Flags) \
-  ZvFBField_Composite(T, String,, ID, Flags, str, str)
-#define ZvFBFieldStringFn(T, ID, Flags) \
-  ZvFBField_Composite(T, String, Fn, ID, Flags, str, str)
+#define ZvFBFieldString(U, ID, Flags) \
+  ZvFBField_Composite_(U, String,, ID, Flags, str, str)
+#define ZvFBFieldStringFn(U, ID, Flags) \
+  ZvFBField_Composite_(U, String, Fn, ID, Flags, str, str)
 
-#define ZvFBFieldComposite(T, Type, ID, Flags, SaveFn, LoadFn) \
-  ZvFBField_Composite(T, Composite,, ID, Flags, SaveFn, LoadFn)
-#define ZvFBFieldCompositeFn(T, Type, ID, Flags, SaveFn, LoadFn) \
-  ZvFBField_Composite(T, Composite, Fn, ID, Flags, SaveFn, LoadFn)
+#define ZvFBFieldComposite(U, ID, Flags, SaveFn, LoadFn) \
+  ZvFBField_Composite_(U, Composite,, ID, Flags, SaveFn, LoadFn)
+#define ZvFBFieldCompositeFn(U, ID, Flags, SaveFn, LoadFn) \
+  ZvFBField_Composite_(U, Composite, Fn, ID, Flags, SaveFn, LoadFn)
 
-#define ZvFBField_Primitive(T, Type, Fn, ID, Flags) \
-  struct ZvFBField_Name_(T, Type, ID) : \
-      public ZvField##Type##Fn(T, ID, Flags) { \
-    using Base = ZvField##Type(T, ID, Flags); \
-    using V = typename Base::T; \
-    using FBB = ZvFBB<T>; \
-    using FBS = ZvFBS<T>; \
+#define ZvFBField_Inline_(U, Fn, ID, Flags, SaveFn, LoadFn) \
+  struct ZvFBField_Name_(U, Inline, ID) : \
+      public ZvFieldComposite##Fn(U, ID, Flags) { \
+    using Base = ZvFieldComposite##Fn(U, ID, Flags); \
+    using FBB = ZvFBB<U>; \
+    using FBS = ZvFBS<U>; \
+    enum { Inline = 1 }; \
+    static void save(FBB &fbb, const void *o) { \
+      auto v = SaveFn(Base::get(o)); \
+      fbb.add_##ID(&v); \
+    } \
+    static auto load_(const FBS *o_) { \
+      auto v = o_->ID(); \
+      return LoadFn(v); \
+    } \
+    static void load(void *o, const FBS *o_) { \
+      Base::set(o, load_(o_)); \
+    } \
+  };
+
+#define ZvFBFieldInline(U, ID, Flags, SaveFn, LoadFn) \
+  ZvFBField_Inline_(U,, ID, Flags, SaveFn, LoadFn)
+#define ZvFBFieldInlineFn(U, ID, Flags, SaveFn, LoadFn) \
+  ZvFBField_Inline_(U, Fn, ID, Flags, SaveFn, LoadFn)
+
+#define ZvFBField_Int_(U, Type, Fn, ID, Flags) \
+  struct ZvFBField_Name_(U, Type, ID) : \
+      public ZvField##Type##Fn(U, ID, Flags) { \
+    using Base = ZvField##Type##Fn(U, ID, Flags); \
+    using T = typename Base::T; \
+    using FBB = ZvFBB<U>; \
+    using FBS = ZvFBS<U>; \
     static void save(FBB &fbb, const void *o) { fbb.add_##ID(Base::get(o)); } \
-    static auto load_(const FBS *o_) { return static_cast<V>(o_->ID()); } \
+    static auto load_(const FBS *o_) { return static_cast<T>(o_->ID()); } \
     static void load(void *o, const FBS *o_) { Base::set(o, load_(o_)); } \
   };
 
+#define ZvFBFieldBool(T, ID, Flags) \
+  ZvFBField_Int_(T, Bool,, ID, Flags)
+#define ZvFBFieldBoolFn(T, ID, Flags) \
+  ZvFBField_Int_(T, Bool, Fn, ID, Flags)
 #define ZvFBFieldInt(T, ID, Flags) \
-  ZvFBField_Primitive(T, Bool,, ID, Flags)
+  ZvFBField_Int_(T, Int,, ID, Flags)
 #define ZvFBFieldIntFn(T, ID, Flags) \
-  ZvFBField_Primitive(T, Bool, Fn, ID, Flags)
-#define ZvFBFieldFloat(T, ID, Flags) \
-  ZvFBField_Primitive(T, Float,, ID, Flags)
-#define ZvFBFieldFloatFn(T, ID, Flags) \
-  ZvFBField_Primitive(T, Float, Fn, ID, Flags)
-#define ZvFBFieldFixed(T, ID, Flags) \
-  ZvFBField_Primitive(T, Fixed,, ID, Flags)
-#define ZvFBFieldFixedFn(T, ID, Flags) \
-  ZvFBField_Primitive(T, Fixed, Fn, ID, Flags)
+  ZvFBField_Int_(T, Int, Fn, ID, Flags)
 
-#define ZvFBField_Decimal(T, Fn, ID, Flags) \
-  struct ZvFBField_Name_(T, Decimal, ID) : \
-      public ZvFieldDecimal##Fn(T, ID, Flags) { \
-    using Base = ZvFieldDecimal(T, ID, Flags); \
-    using FBB = ZvFBB<T>; \
-    using FBS = ZvFBS<T>; \
+#define ZvFBField_Fixed_(U, Type, Fn, ID, Flags, Exponent) \
+  struct ZvFBField_Name_(U, Type, ID) : \
+      public ZvField##Type##Fn(U, ID, Flags, Exponent) { \
+    using Base = ZvField##Type##Fn(U, ID, Flags, Exponent); \
+    using T = typename Base::T; \
+    using FBB = ZvFBB<U>; \
+    using FBS = ZvFBS<U>; \
+    static void save(FBB &fbb, const void *o) { fbb.add_##ID(Base::get(o)); } \
+    static auto load_(const FBS *o_) { return static_cast<T>(o_->ID()); } \
+    static void load(void *o, const FBS *o_) { Base::set(o, load_(o_)); } \
+  };
+
+#define ZvFBFieldFloat(U, ID, Flags, Exponent) \
+  ZvFBField_Fixed_(U, Float,, ID, Flags, Exponent)
+#define ZvFBFieldFloatFn(U, ID, Flags, Exponent) \
+  ZvFBField_Fixed_(U, Float, Fn, ID, Flags, Exponent)
+#define ZvFBFieldFixed(U, ID, Flags, Exponent) \
+  ZvFBField_Fixed_(U, Fixed,, ID, Flags, Exponent)
+#define ZvFBFieldFixedFn(U, ID, Flags, Exponent) \
+  ZvFBField_Fixed_(U, Fixed, Fn, ID, Flags, Exponent)
+
+#define ZvFBField_Decimal(U, Fn, ID, Flags, Exponent) \
+  struct ZvFBField_Name_(U, Decimal, ID) : \
+      public ZvFieldDecimal##Fn(U, ID, Flags, Exponent) { \
+    using Base = ZvFieldDecimal##Fn(U, ID, Flags, Exponent); \
+    using FBB = ZvFBB<U>; \
+    using FBS = ZvFBS<U>; \
     static void save(FBB &fbb, const void *o) { \
       using namespace Zfb::Save; \
       auto v = decimal(Base::get(o)); \
@@ -116,58 +162,58 @@ template <typename T> using ZvFBS = decltype(*ZvFBS_(ZuDeclVal<T *>()));
     static void load(void *o, const FBS *o_) { Base::set(o, load_(o_)); } \
   };
 
-#define ZvFBFieldDecimal(T, ID, Flags) \
-  ZvFBField_Decimal(T,, ID, Flags)
-#define ZvFBFieldDecimalFn(T, ID, Flags) \
-  ZvFBField_Decimal(T, Fn, ID, Flags)
+#define ZvFBFieldDecimal(U, ID, Flags, Exponent) \
+  ZvFBField_Decimal(U,, ID, Flags, Exponent)
+#define ZvFBFieldDecimalFn(U, ID, Flags, Exponent) \
+  ZvFBField_Decimal(U, Fn, ID, Flags, Exponent)
 
-#define ZvFBFieldHex(T, ID, Flags) \
-  ZvFBField_Primitive(T, Hex,, ID, Flags)
-#define ZvFBFieldHexFn(T, ID, Flags) \
-  ZvFBField_Primitive(T, Hex, Fn, ID, Flags)
+#define ZvFBFieldHex(U, ID, Flags) \
+  ZvFBField_Primitive(U, Hex,, ID, Flags)
+#define ZvFBFieldHexFn(U, ID, Flags) \
+  ZvFBField_Primitive(U, Hex, Fn, ID, Flags)
 
-#define ZvFBField_Enum(T, Fn, ID, Flags, Map) \
-  struct ZvFBField_Name_(T, Type, ID) : \
-      public ZvFieldEnum##Fn(T, ID, Flags, Map) { \
-    using Base = ZvFieldEnum(T, ID, Flags, Map); \
-    using V = typename Base::T; \
-    using FBB = ZvFBB<T>; \
-    using FBS = ZvFBS<T>; \
+#define ZvFBField_Enum(U, Fn, ID, Flags, Map) \
+  struct ZvFBField_Name_(U, Type, ID) : \
+      public ZvFieldEnum##Fn(U, ID, Flags, Map) { \
+    using Base = ZvFieldEnum##Fn(U, ID, Flags, Map); \
+    using T = typename Base::T; \
+    using FBB = ZvFBB<U>; \
+    using FBS = ZvFBS<U>; \
     static void save(FBB &fbb, const void *o) { \
       fbb.add_##ID(static_cast<Map::FBS>(Base::get(o))); \
     } \
-    static auto load_(const FBS *o_) { return static_cast<V>(o_->ID()); } \
+    static auto load_(const FBS *o_) { return static_cast<T>(o_->ID()); } \
     static void load(void *o, const FBS *o_) { Base::set(o, load_(o_)); } \
   };
 
-#define ZvFBFieldEnum(T, ID, Flags) \
-  ZvFBField_Enum(T,, ID, Flags)
-#define ZvFBFieldEnumFn(T, ID, Flags) \
-  ZvFBField_Enum(T, Fn, ID, Flags)
+#define ZvFBFieldEnum(U, ID, Flags, Map) \
+  ZvFBField_Enum(U,, ID, Flags, Map)
+#define ZvFBFieldEnumFn(U, ID, Flags, Map) \
+  ZvFBField_Enum(U, Fn, ID, Flags, Map)
 
-#define ZvFBField_Flags(T, Fn, ID, Flags, Map) \
-  struct ZvFBField_Name_(T, Type, ID) : \
-      public ZvFieldFlags##Fn(T, ID, Flags, Map) { \
-    using Base = ZvFieldFlags(T, ID, Flags, Map); \
-    using V = typename Base::T; \
-    using FBB = ZvFBB<T>; \
-    using FBS = ZvFBS<T>; \
+#define ZvFBField_Flags(U, Fn, ID, Flags, Map) \
+  struct ZvFBField_Name_(U, Type, ID) : \
+      public ZvFieldFlags##Fn(U, ID, Flags, Map) { \
+    using Base = ZvFieldFlags##Fn(U, ID, Flags, Map); \
+    using T = typename Base::T; \
+    using FBB = ZvFBB<U>; \
+    using FBS = ZvFBS<U>; \
     static void save(FBB &fbb, const void *o) { fbb.add_##ID(Base::get(o)); } \
-    static auto load_(const FBS *o_) { return static_cast<V>(o_->ID()); } \
+    static auto load_(const FBS *o_) { return static_cast<T>(o_->ID()); } \
     static void load(void *o, const FBS *o_) { Base::set(o, load_(o_)); } \
   };
 
-#define ZvFBFieldFlags(T, ID, Flags) \
-  ZvFBField_Flags(T,, ID, Flags)
-#define ZvFBFieldFlagsFn(T, ID, Flags) \
-  ZvFBField_Flags(T, Fn, ID, Flags)
+#define ZvFBFieldFlags(U, ID, Flags) \
+  ZvFBField_Flags(U,, ID, Flags)
+#define ZvFBFieldFlagsFn(U, ID, Flags) \
+  ZvFBField_Flags(U, Fn, ID, Flags)
 
-#define ZvFBField_Time(T, Fn, ID, Flags) \
-  struct ZvFBField_Name_(T, Type, ID) : \
-      public ZvFieldTime##Fn(T, ID, Flags) { \
-    using Base = ZvFieldTime(T, ID, Flags); \
-    using FBB = ZvFBB<T>; \
-    using FBS = ZvFBS<T>; \
+#define ZvFBField_Time(U, Fn, ID, Flags) \
+  struct ZvFBField_Name_(U, Type, ID) : \
+      public ZvFieldTime##Fn(U, ID, Flags) { \
+    using Base = ZvFieldTime##Fn(U, ID, Flags); \
+    using FBB = ZvFBB<U>; \
+    using FBS = ZvFBS<U>; \
     static void save(FBB &fbb, const void *o) { \
       using namespace Zfb::Save; \
       auto v = dateTime(Base::get(o)); \
@@ -182,13 +228,14 @@ template <typename T> using ZvFBS = decltype(*ZvFBS_(ZuDeclVal<T *>()));
     } \
   };
 
-#define ZvFBFieldTime(T, ID, Time) \
-  ZvFBField_Time(T,, ID, Time)
-#define ZvFBFieldTimeFn(T, ID, Time) \
-  ZvFBField_Time(T, Fn, ID, Time)
+#define ZvFBFieldTime(U, ID, Time) \
+  ZvFBField_Time(U,, ID, Time)
+#define ZvFBFieldTimeFn(U, ID, Time) \
+  ZvFBField_Time(U, Fn, ID, Time)
 
-#define ZvFBField_Decl_(T, Type, ...) ZvFBField##Type(T, __VA_ARGS__)
-#define ZvFBField_Decl(T, Args) ZuPP_Defer(ZvFBField_Decl_)(T, ZuPP_Strip(Args))
+#define ZvFBField_Decl_(U, Type, ...) ZvFBField##Type(U, __VA_ARGS__)
+#define ZvFBField_Decl(U, Args) \
+  ZuPP_Defer(ZvFBField_Decl_)(U, ZuPP_Strip(Args))
 
 template <typename T> ZuTypeList<> ZvFBFieldList_(T *); // default
 
@@ -214,7 +261,7 @@ template <typename T> using Offset = Zfb::Offset<T>;
 template <typename Field> struct HasOffset {
   enum { OK =
     Field::Type == ZvFieldType::String ||
-    Field::Type == ZvFieldType::Composite ||
+    (Field::Type == ZvFieldType::Composite && !Field::Inline) ||
     Field::Type == ZvFieldType::Decimal ||
     Field::Type == ZvFieldType::Time };
 };
@@ -230,8 +277,8 @@ template <typename OffsetFieldList, typename Field>
 struct SaveField<OffsetFieldList, Field, true> {
   template <typename FBB>
   static void save(const void *, FBB &fbb, const Offset<void> *offsets) {
-    using OffsetIndex = Field::OffsetIndex<OffsetFieldList>;
-    Field::save(fbb, offsets[OffsetIndex]);
+    using OffsetIndex = ZuTypeIndex<Field, OffsetFieldList>;
+    Field::save(fbb, offsets[OffsetIndex::I]);
   }
 };
 template <typename T, typename FieldList>
@@ -239,11 +286,11 @@ struct SaveFieldList {
   using FBB = ZvFBB<T>;
   using FBS = ZvFBS<T>;
   static Zfb::Offset<FBS> save(const void *o, Zfb::Builder &fbb) {
-    using OffsetFieldList = ZuTypeGrep<HasOffset, FieldList>::T;
+    using OffsetFieldList = typename ZuTypeGrep<HasOffset, FieldList>::T;
     Offset<void> offsets[OffsetFieldList::N];
     ZuTypeAll<OffsetFieldList>::invoke(
 	[o, &fbb, offsets = &offsets[0]]<typename Field>() {
-	  using OffsetIndex = Field::OffsetIndex<OffsetFieldList>;
+	  using OffsetIndex = ZuTypeIndex<Field, OffsetFieldList>;
 	  offsets[OffsetIndex::I] = Field::save(o, fbb).Union();
 	});
     FBB b{fbb};
@@ -261,33 +308,33 @@ template <typename T>
 struct ZvFB {
   using FBB = ZvFBB<T>;
   using FBS = ZvFBS<T>;
-  using FieldList = ZfbFieldList<T>;
+  using FieldList = ZvFBFieldList<T>;
 
-  template <typename T>
-  struct NotSynOK { enum { OK = !(T::Flags & ZvFieldFlags::Synthetic) }; };
-  using AllFields = typename ZuTypeGrep<NotSynOK, FieldList>::T;
+  template <typename U>
+  struct AllFilter { enum { OK = !(U::Flags & ZvFieldFlags::Synthetic) }; };
+  using AllFields = typename ZuTypeGrep<AllFilter, FieldList>::T;
 
-  template <typename T>
-  struct UpdateOK { enum {
-    OK = (T::Flags & (ZvFieldFlags::Primary | ZvFieldFlags::Update)) }; };
-  using UpdatedFields = typename ZuTypeGrep<UpdateOK, AllFields>::T;
+  template <typename U>
+  struct UpdatedFilter { enum {
+    OK = (U::Flags & (ZvFieldFlags::Primary | ZvFieldFlags::Update)) }; };
+  using UpdatedFields = typename ZuTypeGrep<UpdatedFilter, AllFields>::T;
 
-  template <typename T>
-  struct CtorOK { enum { OK = T::Flags & ZvFieldFlags::Ctor_ }; };
-  using CtorFields_ = typename ZuTypeGrep<CtorOK, AllFields>::T;
-  template <typename T>
-  struct CtorIndex { enum { I = ZvFieldFlags::CtorIndex(T::Flags) }; };
+  template <typename U>
+  struct CtorFilter { enum { OK = U::Flags & ZvFieldFlags::Ctor_ }; };
+  using CtorFields_ = typename ZuTypeGrep<CtorFilter, AllFields>::T;
+  template <typename U>
+  struct CtorIndex { enum { I = ZvFieldFlags::CtorIndex(U::Flags) }; };
   using CtorFields = typename ZuTypeSort<CtorIndex, CtorFields_>::T;
 
-  template <typename T>
-  struct InitOK { enum { OK = !(T::Flags & ZvFieldFlags::Ctor) }; };
-  using InitFields = typename ZuTypeGrep<InitOK, AllFields>::T;
+  template <typename U>
+  struct InitFilter { enum { OK = !(U::Flags & ZvFieldFlags::Ctor) }; };
+  using InitFields = typename ZuTypeGrep<InitFilter, AllFields>::T;
 
-  static Zfb::Offset<FBS> save(const void *o, Zfb::Builder &fbb) const {
+  static Zfb::Offset<FBS> save(const void *o, Zfb::Builder &fbb) {
     using namespace ZvFB_Save;
     return SaveFieldList<T, AllFields>::save(o, fbb);
   }
-  static Zfb::Offset<FBS> saveUpdate(const void *o, Zfb::Builder &fbb) const {
+  static Zfb::Offset<FBS> saveUpdate(const void *o, Zfb::Builder &fbb) {
     using namespace ZvFB_Save;
     return SaveFieldList<T, UpdatedFields>::save(o, fbb);
   }
@@ -306,17 +353,15 @@ struct ZvFB {
     Load_Ctor_(const FBS *o_) : T{ Fields::load_(o_)... } { }
   };
   using Load_Ctor = typename ZuTypeApply<Load_Ctor_, CtorFields>::T;
-  template <typename ...Fields>
-  struct Load_Init_ : public Load_Ctor {
-    Load_Init_() = default;
-    Load_Init_(const FBS *o_) : Load_Ctor{o_} {
-      ZuTypeAll<Fields>::invoke(
+  struct Load : public Load_Ctor {
+    Load() = default;
+    Load(const FBS *o_) : Load_Ctor{o_} {
+      ZuTypeAll<InitFields>::invoke(
 	  [this, o_]<typename Field>() {
 	    Field::load(static_cast<T *>(this), o_);
 	  });
     }
   };
-  using Load = typename ZuTypeApply<Load_Init_, InitFields>::T;
 };
 
 #endif /* ZvFBField_HPP */

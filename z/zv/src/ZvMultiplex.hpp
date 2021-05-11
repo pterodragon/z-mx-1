@@ -67,7 +67,7 @@ struct ZvCxnOptions : public ZiCxnOptions {
   void init(const ZvCf *cf) {
     if (!cf) return;
 
-    flags(cf->getFlags<ZiCxnFlags::Flags>("options", false, 0));
+    flags(cf->getFlags<ZiCxnFlags::Map>("options", false, 0));
 
     // multicastInterface is the IP address of the interface used for sending
     // multicastTTL is the TTL (number of hops) used for sending

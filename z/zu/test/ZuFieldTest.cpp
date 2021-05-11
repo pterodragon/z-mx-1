@@ -16,14 +16,14 @@ namespace Foo {
     void j(const char *s) { j_ = s; }
   };
 
-  ZuFieldDef(A, (Data, i), (Fn, j));
+  ZuFields(A, (Data, i), (Fn, j));
 }
 
 int main()
 {
   using A = Foo::A;
   A a;
-  ZuTypeAll<ZuFields<A>>::invoke([a = &a]<typename T>() mutable {
+  ZuTypeAll<ZuFieldList<A>>::invoke([a = &a]<typename T>() mutable {
     std::cout << T::id() << '=' << T::get(a) << '\n';
   });
   return 0;

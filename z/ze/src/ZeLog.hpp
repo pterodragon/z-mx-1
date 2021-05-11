@@ -65,7 +65,7 @@
 #endif
 
 namespace ZeSinkType {
-  ZtEnumerate(File, Debug, System, Lambda);
+  ZtEnumValues("ZeSinkType", File, Debug, System, Lambda);
 };
 struct ZeSink : public ZmPolymorph {
   ZeSink(int type_) : type(type_) { }

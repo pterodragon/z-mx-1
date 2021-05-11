@@ -312,7 +312,7 @@ template <typename T0> struct ZuTypeGrep_<false, T0> {
 template <template <typename> class, typename ...> struct ZuTypeGrep;
 template <template <typename> class Filter, typename T0>
 struct ZuTypeGrep<Filter, T0> {
-  using T = ZuTypeGrep_<Filter<T0>::OK, T0>::T;
+  using T = typename ZuTypeGrep_<Filter<T0>::OK, T0>::T;
 };
 template <template <typename> class Filter, typename T0, typename ...Args>
 struct ZuTypeGrep<Filter, T0, Args...> {
@@ -350,7 +350,7 @@ struct ZuTypeReduce<Reduce, ZuTypeList<Args...>> :
 template <unsigned N, typename ...Args> struct ZuTypeLeft;
 template <unsigned N, typename Arg0, typename ...Args>
 struct ZuTypeLeft<N, Arg0, Args...> {
-  using T = typename ZuTypeLeft<N - 1, Args...>::T::Prepend<Arg0>::T;
+  using T = typename ZuTypeLeft<N - 1, Args...>::T::template Prepend<Arg0>::T;
 };
 template <typename Arg0, typename ...Args>
 struct ZuTypeLeft<0, Arg0, Args...> {
@@ -394,7 +394,7 @@ struct ZuTypeMerge_<Index,
     ZuTypeList<RightArg0, RightArgs...>, false> {
   using T = typename ZuTypeMerge<Index,
     ZuTypeList<LeftArgs...>,
-    ZuTypeList<RightArg0, RightArgs...>>::T::Prepend<LeftArg0>::T;
+    ZuTypeList<RightArg0, RightArgs...>>::T::template Prepend<LeftArg0>::T;
 };
 template <
   template <typename> class Index,
@@ -405,7 +405,7 @@ struct ZuTypeMerge_<Index,
     ZuTypeList<RightArg0, RightArgs...>, true> {
   using T = typename ZuTypeMerge<Index,
     ZuTypeList<LeftArg0, LeftArgs...>,
-    ZuTypeList<RightArgs...>>::T::Prepend<RightArg0>::T;
+    ZuTypeList<RightArgs...>>::T::template Prepend<RightArg0>::T;
 };
 template <
   template <typename> class Index,

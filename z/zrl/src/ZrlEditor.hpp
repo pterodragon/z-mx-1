@@ -51,7 +51,7 @@
 namespace Zrl {
 
 namespace Op { // line editor operation codes
-  ZtEnumerate(
+  ZtEnumValues("Zrl.Op",
     Null,		// sentinel
 
     Nop,		// no-operation

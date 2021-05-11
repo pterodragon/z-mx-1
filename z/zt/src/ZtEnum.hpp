@@ -107,9 +107,9 @@ using ZtEnum = ZuBox_1(int8_t);
   private: \
     ZmRef<S2V>	m_s2v; \
     ZmRef<V2S>	m_v2s; \
-  } \
+  }
 #define ZtEnumValues(ID, ...) \
-  ZtEnumValues_(__VA_ARGS__) \
+  ZtEnumValues_(__VA_ARGS__); \
   ZtEnumNames_(ID, ZuPP_Eval(ZuPP_MapComma(ZuPP_Q, __VA_ARGS__)))
 
 #define ZtEnumMap(ID, Map, ...) \

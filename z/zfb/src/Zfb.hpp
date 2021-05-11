@@ -45,6 +45,7 @@
 
 #include <zlib/ZiPlatform.hpp>
 #include <zlib/ZiIOBuf.hpp>
+#include <zlib/ZiIP.hpp>
 
 #include <zlib/types_fbs.h>
 
@@ -206,7 +207,9 @@ namespace Save {
 
   // decimal
   inline auto decimal(const ZuDecimal &v) {
-    return Decimal{(uint64_t)(v.value>>64), (uint64_t)v.value};
+    return Decimal{
+      static_cast<uint64_t>(v.value>>64),
+      static_cast<uint64_t>(v.value)};
   }
 
   // bitmap
@@ -218,15 +221,20 @@ namespace Save {
     if (n > 0) {
       n = (n>>6) + 1;
       v.reserve(n);
-      for (unsigned i = 0; i < (unsigned)n; i++)
+      for (unsigned i = 0; i < static_cast<unsigned>(n); i++)
 	v.push_back(hwloc_bitmap_to_ith_ulong(m, i));
     }
     return b.CreateVector(v);
   }
 
   // date/time
-  inline auto dateTime(const ZtDate &v) {
-    return DateTime{v.julian(), v.sec(), v.nsec()};
+  inline DateTime dateTime(const ZtDate &v) {
+    return {v.julian(), v.sec(), v.nsec()};
+  }
+
+  // IP address
+  inline IP ip(ZiIP addr) {
+    return {static_cast<uint32_t>(addr)};
   }
 
   // save file
@@ -275,8 +283,13 @@ namespace Load {
   }
 
   // date/time
-  inline ZtDate dateTime(const DateTime *v) {
+  inline auto dateTime(const DateTime *v) {
     return ZtDate{ZtDate::Julian, v->julian(), v->sec(), v->nsec()};
+  }
+
+  // IP address
+  inline ZiIP ip(const IP *v) {
+    return {v->addr()};
   }
 
   // load file
@@ -333,7 +346,7 @@ namespace Load {
     ZmRef<S2V>	m_s2v; \
   }; \
   const char *name(int i) { \
-    return fbs::EnumName##Enum(static_cast<FBS>(i)); \
+    return fbs::EnumName##Enum(static_cast<fbs::Enum>(i)); \
   } \
   struct Map : public Map_<Map> { \
     Map() { for (unsigned i = 0; i < N; i++) this->add(name(i), i); } \

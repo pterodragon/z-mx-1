@@ -65,15 +65,15 @@ class ZvAnyLink;
 namespace ZvTelemetry {
 
 namespace RAG {
-  ZfbEnumValues("RAG", Off, Red, Amber, Green);
+  ZfbEnumValues(RAG, Off, Red, Amber, Green);
 }
 
 namespace ThreadPriority {
-  ZfbEnumValues("ThreadPriority", RealTime, High, Normal, Low);
+  ZfbEnumValues(ThreadPriority, RealTime, High, Normal, Low);
 }
 
 namespace MxState {
-  ZfbEnumValues("MxState",
+  ZfbEnumValues(MxState,
       Stopped, Starting, Running, Draining, Drained, Stopping);
 
   int rag(int i) {
@@ -86,15 +86,15 @@ namespace MxState {
 }
 
 namespace SocketType {
-  ZfbEnumValues("SocketType", TCPIn, TCPOut, UDP);
+  ZfbEnumValues(SocketType, TCPIn, TCPOut, UDP);
 }
 
 namespace QueueType {
-  ZfbEnumValues("QueueType", Thread, IPC, Rx, Tx);
+  ZfbEnumValues(QueueType, Thread, IPC, Rx, Tx);
 }
 
 namespace LinkState {
-  ZfbEnumValues("LinkState", 
+  ZfbEnumValues(LinkState, 
     Down,
     Disabled,
     Deleted,
@@ -117,10 +117,8 @@ namespace LinkState {
 }
 
 namespace EngineState {
-  ZfbEnumValues("EngineState",
-      Stopped, Starting, Running, Stopping,
-      StartPending,		// started while stopping
-      StopPending);		// stopped while starting
+  ZfbEnumValues(EngineState,
+      Stopped, Starting, Running, Stopping, StartPending, StopPending);
 
   int rag(int i) {
     using namespace RAG;
@@ -132,11 +130,11 @@ namespace EngineState {
 }
 
 namespace DBCacheMode {
-  ZfbEnumValues("DBCacheMode", Normal, FullCache)
+  ZfbEnumValues(DBCacheMode, Normal, FullCache)
 }
 
 namespace DBHostState {
-  ZfbEnumValues("DBHostState",
+  ZfbEnumValues(DBHostState,
       Instantiated,
       Initialized,
       Stopped,
@@ -157,11 +155,11 @@ namespace DBHostState {
 }
 
 namespace AppRole {
-  ZfbEnumValues("AppRole", Dev, Test, Prod)
+  ZfbEnumValues(AppRole, Dev, Test, Prod)
 }
 
 namespace Severity {
-  ZfbEnumValues("Severity", Debug, Info, Warning, Error, Fatal)
+  ZfbEnumValues(Severity, Debug, Info, Warning, Error, Fatal)
 }
 
 template <typename> struct load;
@@ -183,14 +181,14 @@ struct Heap : public Heap_, public ZvFieldPrint<Heap> {
   }
   void rag(int) { } // unused
 };
-ZvFBFieldDef(Heap,
+ZvFBFields(Heap,
     (String, id, (Ctor(0), Primary)),
-    (Int, size, (Ctor(6) | Primary)),
+    (Int, size, (Ctor(6), Primary)),
     (Int, alignment, (Ctor(9))),
-    (Int, partition, (Ctor(7) | Primary)),
+    (Int, partition, (Ctor(7), Primary)),
     (Bool, sharded, (Ctor(8))),
     (Int, cacheSize, (Ctor(1))),
-    (Composite, cpuset, (Ctor(2))),
+    (Composite, cpuset, (Ctor(2)), bitmap, bitmap),
     (Int, cacheAllocs, (Ctor(3), Update, Series, Delta)),
     (Int, heapAllocs, (Ctor(4), Update, Series, Delta)),
     (Int, frees, (Ctor(5), Update, Series, Delta)),
@@ -241,7 +239,7 @@ ZvFBFields(Thread,
     (Int, index, (Ctor(6))),
     (Int, tid, (Ctor(1), Primary)),
     (Float, cpuUsage, (Ctor(4), Update, Series), 2),
-    (Composite, cpuset, (Ctor(3))),
+    (Composite, cpuset, (Ctor(3)), bitmap, bitmap),
     (Enum, priority, ctor(8), ThreadPriority::Map),
     (Int, sysPriority, (Ctor(5))),
     (Int, stackSize, (Ctor(2))),
@@ -294,15 +292,15 @@ struct Socket : public Socket_, public ZvFieldPrint<Socket> {
 ZvFBFields(Socket,
     (String, mxID, (Ctor(0))),
     (Enum, type, (Ctor(15)), SocketType::Map),
-    (Composite, remoteIP, (Ctor(11))),
+    (Inline, remoteIP, (Ctor(11)), ip, ip),
     (Int, remotePort, (Ctor(13))),
-    (Composite, localIP, (Ctor(10))),
+    (Inline, localIP, (Ctor(10)), ip, ip),
     (Int, localPort, (Ctor(12))),
     (Int, socket, (Ctor(1), Primary)),
     (Int, flags, (Ctor(14))),
-    (Composite, mreqAddr, (Ctor(6))),
-    (Composite, mreqIf, (Ctor(7))),
-    (Composite, mif, (Ctor(8))),
+    (Inline, mreqAddr, (Ctor(6)), ip, ip),
+    (Inline, mreqIf, (Ctor(7)), ip, ip),
+    (Inline, mif, (Ctor(8)), ip, ip),
     (Int, ttl, (Ctor(9))),
     (Int, rxBufSize, (Ctor(2))),
     (Int, rxBufLen, (Ctor(3), Update, Series)),
@@ -475,7 +473,7 @@ struct DBHost : public ZvFieldPrint<DBHost> {
   void rag(int) { } // unused
 };
 ZvFBFields(DBHost,
-    (Composite, ip, (Ctor(0))),
+    (Inline, ip, (Ctor(0)), ip, ip),
     (Int, id, (Ctor(1), Primary)),
     (Int, priority, (Ctor(2))),
     (Enum, state, (Ctor(4), Update, Series), DBHostState::Map),
@@ -563,12 +561,12 @@ ZvFBFields(Alert,
     (String, message, (Ctor(4))));
 
 namespace ReqType {
-  ZfbEnumValues("ReqType",
+  ZfbEnumValues(ReqType,
       Heap, HashTbl, Thread, Mx, Queue, Engine, DBEnv, App, Alert);
 }
 
 namespace TelData {
-  ZfbEnumUnion("TelData",
+  ZfbEnumUnion(TelData,
       Heap, HashTbl, Thread, Mx, Socket, Queue, Engine, Link,
       DB, DBHost, DBEnv, App, Alert);
 }

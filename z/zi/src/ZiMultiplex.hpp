@@ -434,7 +434,7 @@ public:
 
   template <typename S> void print(S &s) const {
     using namespace ZiCxnFlags;
-    s << "flags=" << Flags::instance()->print(s, m_flags);
+    s << "flags=" << Map::instance()->print(s, m_flags);
     if (m_flags & (1<<Multicast)) {
       s << " mreqs={";
       for (unsigned i = 0; i < m_mreqs.length(); i++) {
@@ -478,7 +478,7 @@ template <> struct ZuPrint<ZiListenInfo> : public ZuPrintFn { };
 
 // cxn information (direction, socket, local & remote IP/port, options)
 namespace ZiCxnType {
-  ZtEnumerate(TCPIn, TCPOut, UDP);
+  ZtEnumValues("ZiCxnType", TCPIn, TCPOut, UDP);
 }
 
 struct ZiCxnInfo { // pure aggregate, no ctor

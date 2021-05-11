@@ -78,7 +78,7 @@ namespace ZvCSV_ {
       Row &row, const Field *field, const T *object, const Fmt &fmt) {
     switch ((int)field->type) {
       case ZvFieldType::String:
-      case ZvFieldType::Stream:
+      case ZvFieldType::Composite:
       case ZvFieldType::Enum:
       case ZvFieldType::Flags: {
 	ZtString s_;

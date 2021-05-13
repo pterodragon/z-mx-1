@@ -164,6 +164,10 @@ namespace Severity {
 
 template <typename> struct load;
 
+// FIXME - move read-only / synthetic fields to field type (not a flag)
+// FIXME - do not declare setter for RO fields
+// FIXME - skip FB save/load for RO fields
+
 using Heap_ = ZmHeapTelemetry;
 struct Heap : public Heap_, public ZvFieldPrint<Heap> {
   Heap() = default;
@@ -192,8 +196,8 @@ ZvFBFields(Heap,
     (Int, cacheAllocs, (Ctor(3), Update, Series, Delta)),
     (Int, heapAllocs, (Ctor(4), Update, Series, Delta)),
     (Int, frees, (Ctor(5), Update, Series, Delta)),
-    (IntFn, allocated, (Synthetic, Series)),
-    (EnumFn, rag, (Synthetic, Series), RAG::Map));
+    (RdIntFn, allocated, (Series)),
+    (RdEnumFn, rag, (Series), RAG::Map));
 
 using HashTbl_ = ZmHashTelemetry;
 struct HashTbl : public HashTbl_, public ZvFieldPrint<HashTbl> {
@@ -219,7 +223,7 @@ ZvFBFields(HashTbl,
     (Int, count, (Ctor(5), Update, Series)),
     (Float, effLoadFactor, (Ctor(3), Update, Series), 2),
     (Int, resized, (Ctor(6))),
-    (EnumFn, rag, (Synthetic, Series), RAG::Map));
+    (RdEnumFn, rag, (Series), RAG::Map));
 
 using Thread_ = ZmThreadTelemetry;
 struct Thread : public Thread_, public ZvFieldPrint<Thread> {
@@ -240,13 +244,13 @@ ZvFBFields(Thread,
     (Int, tid, (Ctor(1), Primary)),
     (Float, cpuUsage, (Ctor(4), Update, Series), 2),
     (Composite, cpuset, (Ctor(3)), bitmap, bitmap),
-    (Enum, priority, ctor(8), ThreadPriority::Map),
+    (Enum, priority, Ctor(8), ThreadPriority::Map),
     (Int, sysPriority, (Ctor(5))),
     (Int, stackSize, (Ctor(2))),
     (Int, partition, (Ctor(7))),
     (Bool, main, (Ctor(9))),
     (Bool, detached, (Ctor(10))),
-    (EnumFn, rag, (Synthetic, Series), RAG::Map));
+    (RdEnumFn, rag, (Series), RAG::Map));
 
 using Mx_ = ZiMxTelemetry;
 struct Mx : public Mx_, public ZvFieldPrint<Mx> {
@@ -272,7 +276,7 @@ ZvFBFields(Mx,
     (Bool, ll, (Ctor(11))),
     (Int, spin, (Ctor(3))),
     (Int, timeout, (Ctor(4))),
-    (EnumFn, rag, (Synthetic, Series), RAG::Map));
+    (RdEnumFn, rag, (Series), RAG::Map));
 
 using Socket_ = ZiCxnTelemetry;
 struct Socket : public Socket_, public ZvFieldPrint<Socket> {
@@ -306,7 +310,7 @@ ZvFBFields(Socket,
     (Int, rxBufLen, (Ctor(3), Update, Series)),
     (Int, txBufSize, (Ctor(4))),
     (Int, txBufLen, (Ctor(5), Update, Series)),
-    (EnumFn, rag, (Synthetic, Series), RAG::Map));
+    (RdEnumFn, rag, (Series), RAG::Map));
 
 // display sequence:
 //   id, type, size, full, count, seqNo,
@@ -343,7 +347,7 @@ ZvFBFields(Queue,
     (Int, inBytes, (Ctor(4), Update, Series, Delta)),
     (Int, outCount, (Ctor(5), Update, Series, Delta)),
     (Int, outBytes, (Ctor(6), Update, Series, Delta)),
-    (EnumFn, rag, (Synthetic, Series), RAG::Map));
+    (RdEnumFn, rag, (Series), RAG::Map));
 
 // display sequence:
 //   id, state, reconnects, rxSeqNo, txSeqNo
@@ -365,7 +369,7 @@ ZvFBFields(Link,
     (Int, reconnects, (Ctor(4), Update, Series, Delta)),
     (Int, rxSeqNo, (Ctor(2), Update, Series, Delta)),
     (Int, txSeqNo, (Ctor(3), Update, Series, Delta)),
-    (EnumFn, rag, (Synthetic, Series), RAG::Map));
+    (RdEnumFn, rag, (Series), RAG::Map));
 
 struct Engine : public ZvFieldPrint<Engine> {
   ZuID		id;		// primary key
@@ -399,7 +403,7 @@ ZvFBFields(Engine,
     (String, mxID, (Ctor(2))),
     (Int, rxThread, (Ctor(10))),
     (Int, txThread, (Ctor(11))),
-    (EnumFn, rag, (Synthetic, Series), RAG::Map));
+    (RdEnumFn, rag, (Series), RAG::Map));
 
 // display sequence: 
 //   name, id, recSize, compress, cacheMode, cacheSize,
@@ -457,7 +461,7 @@ ZvFBFields(DB,
     (Int, cacheMisses, (Ctor(7), Update, Series, Delta)),
     (Int, fileLoads, (Ctor(8), Update, Series, Delta)),
     (Int, fileMisses, (Ctor(9), Update, Series, Delta)),
-    (EnumFn, rag, (Synthetic, Series), RAG::Map));
+    (RdEnumFn, rag, (Series), RAG::Map));
 
 // display sequence:
 //   id, priority, state, voted, ip, port
@@ -479,7 +483,7 @@ ZvFBFields(DBHost,
     (Enum, state, (Ctor(4), Update, Series), DBHostState::Map),
     (Bool, voted, (Ctor(5), Update, Series)),
     (Int, port, (Ctor(3))),
-    (EnumFn, rag, (Synthetic, Series), RAG::Map));
+    (RdEnumFn, rag, (Series), RAG::Map));
 
 // display sequence: 
 //   self, master, prev, next, state, active, recovering, replicating,
@@ -526,7 +530,7 @@ ZvFBFields(DBEnv,
     (Int, reconnectFreq, (Ctor(3))),
     (Int, electionTimeout, (Ctor(4))),
     (Int, writeThread, (Ctor(9))),
-    (EnumFn, rag, (Synthetic, Series), RAG::Map));
+    (RdEnumFn, rag, (Series), RAG::Map));
 
 // display sequence:
 //   id, role, RAG, uptime, version

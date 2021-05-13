@@ -30,15 +30,19 @@
 
 #include <zlib/ZuLambdaFn.hpp>
 
-template <auto, auto> struct ZuFieldFn_;
-template <
-  typename U, typename R, typename P,
-  R (U::*Get)() const, void (U::*Set)(P)>
-struct ZuFieldFn_<Get, Set> {
+template <auto> struct ZuFieldRdFn_;
+template <typename U, typename R, R (U::*Get)() const>
+struct ZuFieldRdFn_<Get> {
   using T = typename ZuDecay<R>::T;
   static R get(const void *o) {
     return (static_cast<const U *>(o)->*Get)();
   }
+};
+template <auto, auto> struct ZuFieldFn_;
+template <
+  typename U, typename R, typename P,
+  R (U::*Get)() const, void (U::*Set)(P)>
+struct ZuFieldFn_<Get, Set> : public ZuFieldRdFn_<Get> {
   template <typename V>
   static void set(void *o, V &&v) {
     (static_cast<U *>(o)->*Set)(ZuFwd<V>(v));
@@ -53,13 +57,17 @@ constexpr auto ZuFieldFn_Set(void (U::*fn)(P)) noexcept {
   return fn;
 }
 
-template <auto Member> struct ZuFieldData_;
+template <auto Member> struct ZuFieldRdData_;
 template <typename U, typename M, M U::*Member>
-struct ZuFieldData_<Member> {
+struct ZuFieldRdData_<Member> {
   using T = typename ZuDecay<decltype(ZuDeclVal<const U &>().*Member)>::T;
   static const auto &get(const void *o) {
     return static_cast<const U *>(o)->*Member;
   }
+};
+template <auto Member> struct ZuFieldData_;
+template <typename U, typename M, M U::*Member>
+struct ZuFieldData_<Member> : public ZuFieldRdData_<Member> {
   template <typename V>
   static void set(void *o, V &&v) {
     static_cast<U *>(o)->*Member = ZuFwd<V>(v);
@@ -75,9 +83,14 @@ struct ZuField_ : public ID, public Accessor { };
 
 #define ZuFieldData(T, ID) \
   ZuField_<T, T##_##ID, ZuFieldData_<&T::ID>>
+#define ZuFieldRdData(T, ID) \
+  ZuField_<T, T##_##ID, ZuFieldRdData_<&T::ID>>
 #define ZuFieldFn(T, ID) \
   ZuField_<T, T##_##ID, \
     ZuFieldFn_<ZuFieldFn_Get(&T::ID), ZuFieldFn_Set(&T::ID)>>
+#define ZuFieldRdFn(T, ID) \
+  ZuField_<T, T##_##ID, \
+    ZuFieldRdFn_<ZuFieldFn_Get(&T::ID)>>
 
 #define ZuField_ID_(T, Type, ID, ...) ZuFieldID(T, ID)
 #define ZuField_ID(T, Args) ZuPP_Defer(ZuField_ID_)(T, ZuPP_Strip(Args))

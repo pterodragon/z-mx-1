@@ -34,8 +34,6 @@ namespace DaFlags {
 }
 
 struct Row {
-  static const ZvFieldArray fields() noexcept;
-
   ZuStringN<24>	m_string;
   int		m_int;
   int		m_bool;

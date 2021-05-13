@@ -93,12 +93,12 @@ table Socket {			// == ZiCxnTelemetry
   rxBufLen:uint32;
   txBufSize:uint32;
   txBufLen:uint32;
-  mreqAddr:uint32;
-  mreqIf:uint32;
-  mif:uint32;
+  mreqAddr:Zfb.IP;
+  mreqIf:Zfb.IP;
+  mif:Zfb.IP;
   ttl:uint32;
-  localIP:uint32;
-  remoteIP:uint32;
+  localIP:Zfb.IP;
+  remoteIP:Zfb.IP;
   localPort:uint16;
   remotePort:uint16;
   flags:uint8;			// SocketFlags
@@ -202,7 +202,7 @@ enum DBHostState:int8 {
   Stopping		// stop() called - stopping
 }
 table DBHost {
-  ip:uint32;
+  ip:Zfb.IP;
   id:uint32;
   priority:uint32;
   port:uint16;

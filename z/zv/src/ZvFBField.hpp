@@ -45,6 +45,10 @@ using ZvFBS = typename ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>::T;
 #define ZvFBField_Name_(U, Type, ID, ...) U##_##ID##_FB
 #define ZvFBField_Name(U, Args) ZuPP_Defer(ZvFBField_Name_)(U, ZuPP_Strip(Args))
 
+#define ZvFBField_ReadOnly_(U, Type, Fn, ID, ...) \
+  struct ZvFBField_Name_(U, Type, ID) : \
+      public ZvField##Type##Fn(U, ID, __VA_ARGS__) { };
+
 #define ZvFBField_Composite_(U, Type, Fn, ID, Flags, SaveFn, LoadFn) \
   struct ZvFBField_Name_(U, Type, ID) : \
       public ZvField##Type##Fn(U, ID, Flags) { \
@@ -71,11 +75,19 @@ using ZvFBS = typename ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>::T;
   ZvFBField_Composite_(U, String,, ID, Flags, str, str)
 #define ZvFBFieldStringFn(U, ID, Flags) \
   ZvFBField_Composite_(U, String, Fn, ID, Flags, str, str)
+#define ZvFBFieldRdString(U, ID, Flags) \
+  ZvFBField_ReadOnly_(U, String,, ID, Flags)
+#define ZvFBFieldRdStringFn(U, ID, Flags) \
+  ZvFBField_ReadOnly_(U, String, Fn, ID, Flags)
 
 #define ZvFBFieldComposite(U, ID, Flags, SaveFn, LoadFn) \
   ZvFBField_Composite_(U, Composite,, ID, Flags, SaveFn, LoadFn)
 #define ZvFBFieldCompositeFn(U, ID, Flags, SaveFn, LoadFn) \
   ZvFBField_Composite_(U, Composite, Fn, ID, Flags, SaveFn, LoadFn)
+#define ZvFBFieldRdComposite(U, ID, Flags) \
+  ZvFBField_ReadOnly_(U, Composite,, ID, Flags)
+#define ZvFBFieldRdCompositeFn(U, ID, Flags) \
+  ZvFBField_ReadOnly_(U, Composite, Fn, ID, Flags)
 
 #define ZvFBField_Inline_(U, Fn, ID, Flags, SaveFn, LoadFn) \
   struct ZvFBField_Name_(U, Inline, ID) : \
@@ -85,10 +97,12 @@ using ZvFBS = typename ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>::T;
     using FBS = ZvFBS<U>; \
     enum { Inline = 1 }; \
     static void save(FBB &fbb, const void *o) { \
+      using namespace Zfb::Save; \
       auto v = SaveFn(Base::get(o)); \
       fbb.add_##ID(&v); \
     } \
     static auto load_(const FBS *o_) { \
+      using namespace Zfb::Load; \
       auto v = o_->ID(); \
       return LoadFn(v); \
     } \
@@ -114,14 +128,23 @@ using ZvFBS = typename ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>::T;
     static void load(void *o, const FBS *o_) { Base::set(o, load_(o_)); } \
   };
 
-#define ZvFBFieldBool(T, ID, Flags) \
-  ZvFBField_Int_(T, Bool,, ID, Flags)
-#define ZvFBFieldBoolFn(T, ID, Flags) \
-  ZvFBField_Int_(T, Bool, Fn, ID, Flags)
-#define ZvFBFieldInt(T, ID, Flags) \
-  ZvFBField_Int_(T, Int,, ID, Flags)
-#define ZvFBFieldIntFn(T, ID, Flags) \
-  ZvFBField_Int_(T, Int, Fn, ID, Flags)
+#define ZvFBFieldBool(U, ID, Flags) \
+  ZvFBField_Int_(U, Bool,, ID, Flags)
+#define ZvFBFieldBoolFn(U, ID, Flags) \
+  ZvFBField_Int_(U, Bool, Fn, ID, Flags)
+#define ZvFBFieldInt(U, ID, Flags) \
+  ZvFBField_Int_(U, Int,, ID, Flags)
+#define ZvFBFieldIntFn(U, ID, Flags) \
+  ZvFBField_Int_(U, Int, Fn, ID, Flags)
+
+#define ZvFBFieldRdBool(U, ID, Flags) \
+  ZvFBField_ReadOnly_(U, Bool,, ID, Flags)
+#define ZvFBFieldRdBoolFn(U, ID, Flags) \
+  ZvFBField_ReadOnly_(U, Bool, Fn, ID, Flags)
+#define ZvFBFieldRdInt(U, ID, Flags) \
+  ZvFBField_ReadOnly_(U, Int,, ID, Flags)
+#define ZvFBFieldRdIntFn(U, ID, Flags) \
+  ZvFBField_ReadOnly_(U, Int, Fn, ID, Flags)
 
 #define ZvFBField_Fixed_(U, Type, Fn, ID, Flags, Exponent) \
   struct ZvFBField_Name_(U, Type, ID) : \
@@ -144,7 +167,16 @@ using ZvFBS = typename ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>::T;
 #define ZvFBFieldFixedFn(U, ID, Flags, Exponent) \
   ZvFBField_Fixed_(U, Fixed, Fn, ID, Flags, Exponent)
 
-#define ZvFBField_Decimal(U, Fn, ID, Flags, Exponent) \
+#define ZvFBFieldRdFloat(U, ID, Flags, Exponent) \
+  ZvFBField_ReadOnly_(U, Float,, ID, Flags, Exponent)
+#define ZvFBFieldRdFloatFn(U, ID, Flags, Exponent) \
+  ZvFBField_ReadOnly_(U, Float, Fn, ID, Flags, Exponent)
+#define ZvFBFieldRdFixed(U, ID, Flags, Exponent) \
+  ZvFBField_ReadOnly_(U, Fixed,, ID, Flags, Exponent)
+#define ZvFBFieldRdFixedFn(U, ID, Flags, Exponent) \
+  ZvFBField_ReadOnly_(U, Fixed, Fn, ID, Flags, Exponent)
+
+#define ZvFBField_Decimal_(U, Fn, ID, Flags, Exponent) \
   struct ZvFBField_Name_(U, Decimal, ID) : \
       public ZvFieldDecimal##Fn(U, ID, Flags, Exponent) { \
     using Base = ZvFieldDecimal##Fn(U, ID, Flags, Exponent); \
@@ -163,16 +195,26 @@ using ZvFBS = typename ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>::T;
   };
 
 #define ZvFBFieldDecimal(U, ID, Flags, Exponent) \
-  ZvFBField_Decimal(U,, ID, Flags, Exponent)
+  ZvFBField_Decimal_(U,, ID, Flags, Exponent)
 #define ZvFBFieldDecimalFn(U, ID, Flags, Exponent) \
-  ZvFBField_Decimal(U, Fn, ID, Flags, Exponent)
+  ZvFBField_Decimal_(U, Fn, ID, Flags, Exponent)
+
+#define ZvFBFieldRdDecimal(U, ID, Flags, Exponent) \
+  ZvFBField_ReadOnly_(U, Decimal,, ID, Flags, Exponent)
+#define ZvFBFieldRdDecimalFn(U, ID, Flags, Exponent) \
+  ZvFBField_ReadOnly_(U, Decimal, Fn, ID, Flags, Exponent)
 
 #define ZvFBFieldHex(U, ID, Flags) \
-  ZvFBField_Primitive(U, Hex,, ID, Flags)
+  ZvFBField_Int_(U, Hex,, ID, Flags)
 #define ZvFBFieldHexFn(U, ID, Flags) \
-  ZvFBField_Primitive(U, Hex, Fn, ID, Flags)
+  ZvFBField_Int_(U, Hex, Fn, ID, Flags)
 
-#define ZvFBField_Enum(U, Fn, ID, Flags, Map) \
+#define ZvFBFieldRdHex(U, ID, Flags) \
+  ZvFBField_ReadOnly_(U, Hex,, ID, Flags)
+#define ZvFBFieldRdHexFn(U, ID, Flags) \
+  ZvFBField_ReadOnly_(U, Hex, Fn, ID, Flags)
+
+#define ZvFBField_Enum_(U, Fn, ID, Flags, Map) \
   struct ZvFBField_Name_(U, Type, ID) : \
       public ZvFieldEnum##Fn(U, ID, Flags, Map) { \
     using Base = ZvFieldEnum##Fn(U, ID, Flags, Map); \
@@ -187,11 +229,16 @@ using ZvFBS = typename ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>::T;
   };
 
 #define ZvFBFieldEnum(U, ID, Flags, Map) \
-  ZvFBField_Enum(U,, ID, Flags, Map)
+  ZvFBField_Enum_(U,, ID, Flags, Map)
 #define ZvFBFieldEnumFn(U, ID, Flags, Map) \
-  ZvFBField_Enum(U, Fn, ID, Flags, Map)
+  ZvFBField_Enum_(U, Fn, ID, Flags, Map)
 
-#define ZvFBField_Flags(U, Fn, ID, Flags, Map) \
+#define ZvFBFieldRdEnum(U, ID, Flags, Map) \
+  ZvFBField_ReadOnly_(U, Enum,, ID, Flags, Map)
+#define ZvFBFieldRdEnumFn(U, ID, Flags, Map) \
+  ZvFBField_ReadOnly_(U, Enum, Fn, ID, Flags, Map)
+
+#define ZvFBField_Flags_(U, Fn, ID, Flags, Map) \
   struct ZvFBField_Name_(U, Type, ID) : \
       public ZvFieldFlags##Fn(U, ID, Flags, Map) { \
     using Base = ZvFieldFlags##Fn(U, ID, Flags, Map); \
@@ -204,11 +251,16 @@ using ZvFBS = typename ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>::T;
   };
 
 #define ZvFBFieldFlags(U, ID, Flags) \
-  ZvFBField_Flags(U,, ID, Flags)
+  ZvFBField_Flags_(U,, ID, Flags)
 #define ZvFBFieldFlagsFn(U, ID, Flags) \
-  ZvFBField_Flags(U, Fn, ID, Flags)
+  ZvFBField_Flags_(U, Fn, ID, Flags)
 
-#define ZvFBField_Time(U, Fn, ID, Flags) \
+#define ZvFBFieldRdFlags(U, ID, Flags) \
+  ZvFBField_ReadOnly_(U, Flags,, ID, Flags)
+#define ZvFBFieldRdFlagsFn(U, ID, Flags) \
+  ZvFBField_ReadOnly_(U, Flags, Fn, ID, Flags)
+
+#define ZvFBField_Time_(U, Fn, ID, Flags) \
   struct ZvFBField_Name_(U, Type, ID) : \
       public ZvFieldTime##Fn(U, ID, Flags) { \
     using Base = ZvFieldTime##Fn(U, ID, Flags); \
@@ -228,10 +280,15 @@ using ZvFBS = typename ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>::T;
     } \
   };
 
-#define ZvFBFieldTime(U, ID, Time) \
-  ZvFBField_Time(U,, ID, Time)
-#define ZvFBFieldTimeFn(U, ID, Time) \
-  ZvFBField_Time(U, Fn, ID, Time)
+#define ZvFBFieldTime(U, ID, Flags) \
+  ZvFBField_Time_(U,, ID, Flags)
+#define ZvFBFieldTimeFn(U, ID, Flags) \
+  ZvFBField_Time_(U, Fn, ID, Flags)
+
+#define ZvFBFieldRdTime(U, ID, Flags) \
+  ZvFBField_ReadOnly_(U, Time,, ID, Flags)
+#define ZvFBFieldRdTimeFn(U, ID, Flags) \
+  ZvFBField_ReadOnly_(U, Time, Fn, ID, Flags)
 
 #define ZvFBField_Decl_(U, Type, ...) ZvFBField##Type(U, __VA_ARGS__)
 #define ZvFBField_Decl(U, Args) \
@@ -246,7 +303,7 @@ template <typename T> ZuTypeList<> ZvFBFieldList_(T *); // default
     ZuPP_Eval(ZuPP_MapArg(ZuField_ID, U, __VA_ARGS__)) \
     ZuPP_Eval(ZuPP_MapArg(ZvFBField_Decl, U, __VA_ARGS__)) \
     using U##_Fields = \
-      ZuTypeList<ZuPP_Eval(ZuPP_MapArgComma(ZvFBField_Name, U, __VA_ARGS__))> \
+      ZuTypeList<ZuPP_Eval(ZuPP_MapArgComma(ZvFBField_Name, U, __VA_ARGS__))>; \
   } \
   U##_Fields ZvFBFieldList_(U *); \
   U##_Fields ZvFieldList_(U *);
@@ -311,7 +368,7 @@ struct ZvFB {
   using FieldList = ZvFBFieldList<T>;
 
   template <typename U>
-  struct AllFilter { enum { OK = !(U::Flags & ZvFieldFlags::Synthetic) }; };
+  struct AllFilter { enum { OK = !(U::Flags & ZvFieldFlags::ReadOnly) }; };
   using AllFields = typename ZuTypeGrep<AllFilter, FieldList>::T;
 
   template <typename U>

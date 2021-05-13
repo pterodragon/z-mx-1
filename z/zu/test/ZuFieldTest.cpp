@@ -17,14 +17,28 @@ namespace Foo {
   };
 
   ZuFields(A, (Data, i), (Fn, j));
+
+  struct B {
+    int i = 42;
+    const char *j_ = "hello";
+    const char *j() const { return j_; }
+  };
+
+  ZuFields(B, (RdData, i), (RdFn, j));
 }
 
 int main()
 {
   using A = Foo::A;
+  using B = Foo::B;
   A a;
+  ZuType<1, ZuFieldList<A>>::T::set(&a, "bye");
   ZuTypeAll<ZuFieldList<A>>::invoke([a = &a]<typename T>() mutable {
     std::cout << T::id() << '=' << T::get(a) << '\n';
+  });
+  B b;
+  ZuTypeAll<ZuFieldList<B>>::invoke([b = &b]<typename T>() mutable {
+    std::cout << T::id() << '=' << T::get(b) << '\n';
   });
   return 0;
 }

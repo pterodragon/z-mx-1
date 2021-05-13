@@ -258,15 +258,17 @@ template <typename ...Args> struct ZuTypeList {
 };
 
 // index -> type
-template <unsigned I, typename ...> struct ZuType;
-template <typename T0, typename ...Args>
-struct ZuType<0, T0, Args...> {
-  using T = T0;
-};
-template <unsigned I, typename O, typename ...Args>
-struct ZuType<I, O, Args...> {
+template <unsigned, typename ...> struct ZuType;
+template <unsigned I, typename T0, typename ...Args>
+struct ZuType_ {
   using T = typename ZuType<I - 1, Args...>::T;
 };
+template <typename T0, typename ...Args>
+struct ZuType_<0, T0, Args...> {
+  using T = T0;
+};
+template <unsigned I, typename ...Args>
+struct ZuType : public ZuType_<I, Args...> { };
 template <unsigned I, typename ...Args>
 struct ZuType<I, ZuTypeList<Args...>> :
   public ZuType<I, Args...> { };

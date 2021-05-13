@@ -35,7 +35,7 @@ pkginclude_HEADERS = ZvLib.hpp \
 	ZvCmdClient.hpp ZvCmdServer.hpp \
 	ZvScheduler.hpp ZvMultiplex.hpp \
 	ZvSeqNo.hpp ZvMsgID.hpp ZvIOQueue.hpp ZvEngine.hpp \
-	ZvTelemetry.hpp ZvTelServer.hpp ZvSQLite.hpp
+	ZvTelemetry.hpp ZvTelServer.hpp ZvSQLite.hpp \
 	${FBS_H}
 #fbsdir = $(datarootdir)/${PACKAGE}/fbs
 #dist_fbs_DATA = fbs/telemetry.fbs

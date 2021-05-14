@@ -28,8 +28,6 @@ namespace DaFlags {
 }
 
 struct Row {
-  static const ZvFieldArray fields() noexcept;
-
   ZuStringN<24>	foo;
   bool		bar;
   int		bah;
@@ -39,16 +37,15 @@ struct Row {
   ZtDate	mabbit;
   int		flags;
 };
-inline const ZvFieldArray Row::fields() noexcept {
-  ZvFields(Row,
-      (String, foo, 0),
-      (Bool, bar, 0),
-      (Float, baz, 0, 2),
-      (Fixed, bam, 0, 2),
-      (Int, snafu, 0),
-      (Time, mabbit, 0),
-      (Flags, flags, 0, DaFlags::Map));
-}
+ZvFields(Row,
+    (String, foo, (Ctor(0))),
+    (Bool, bar, (Ctor(1))),
+    (Int, bah, (Ctor(2))),
+    (Float, baz, (Ctor(3)), 2),
+    (Fixed, bam, (Ctor(4)), 2),
+    (Int, snafu, (Ctor(5))),
+    (Time, mabbit, (Ctor(6))),
+    (Flags, flags, (Ctor(7)), DaFlags::Map));
 
 using CSVWrite = ZmList<ZuRef<ZuPOD<Row> > >;
 

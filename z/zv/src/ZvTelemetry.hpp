@@ -164,10 +164,6 @@ namespace Severity {
 
 template <typename> struct load;
 
-// FIXME - move read-only / synthetic fields to field type (not a flag)
-// FIXME - do not declare setter for RO fields
-// FIXME - skip FB save/load for RO fields
-
 using Heap_ = ZmHeapTelemetry;
 struct Heap : public Heap_, public ZvFieldPrint<Heap> {
   Heap() = default;

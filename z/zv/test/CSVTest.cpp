@@ -42,16 +42,14 @@ struct Row {
   ZtDate	m_time;
   int		m_flags;
 };
-inline const ZvFieldArray Row::fields() noexcept {
-  ZvFields(Row,
-      (StringAlias, string, m_string, 0),
-      (IntAlias, int, m_int, 0),
-      (BoolAlias, bool, m_bool, 0),
-      (FloatAlias, float, m_float, 0, 2),
-      (EnumAlias, enum, m_enum, 0, Enums::Map),
-      (TimeAlias, time, m_time, 0),
-      (FlagsAlias, flags, m_flags, 0, DaFlags::Map));
-}
+ZvFields(Row,
+    (XString, string, m_string, (Ctor(0))),
+    (XInt, int, m_int, (Ctor(1))),
+    (XBool, bool, m_bool, (Ctor(2))),
+    (XFloat, float, m_float, (Ctor(3)), 2),
+    (XEnum, enum, m_enum, (Ctor(4)), Enums::Map),
+    (XTime, time, m_time, (Ctor(5))),
+    (XFlags, flags, m_flags, (Ctor(6)), DaFlags::Map));
 
 using CSVWrite = ZmList<ZuRef<ZuPOD<Row> > >;
 

@@ -81,16 +81,23 @@ struct ZuField_ : public ID, public Accessor { };
   struct T##_##ID { \
     static constexpr const char *id() { return #ID; } };
 
-#define ZuFieldData(T, ID) \
-  ZuField_<T, T##_##ID, ZuFieldData_<&T::ID>>
-#define ZuFieldRdData(T, ID) \
-  ZuField_<T, T##_##ID, ZuFieldRdData_<&T::ID>>
-#define ZuFieldFn(T, ID) \
+#define ZuFieldXData(T, ID, Member) \
+  ZuField_<T, T##_##ID, ZuFieldData_<&T::Member>>
+#define ZuFieldXRdData(T, ID, Member) \
+  ZuField_<T, T##_##ID, ZuFieldRdData_<&T::Member>>
+
+#define ZuFieldData(T, Member) ZuFieldXData(T, Member, Member)
+#define ZuFieldRdData(T, Member) ZuFieldXRdData(T, Member, Member)
+
+#define ZuFieldXFn(T, ID, Get, Set) \
   ZuField_<T, T##_##ID, \
-    ZuFieldFn_<ZuFieldFn_Get(&T::ID), ZuFieldFn_Set(&T::ID)>>
-#define ZuFieldRdFn(T, ID) \
+    ZuFieldFn_<ZuFieldFn_Get(&T::Get), ZuFieldFn_Set(&T::Set)>>
+#define ZuFieldXRdFn(T, ID, Get) \
   ZuField_<T, T##_##ID, \
-    ZuFieldRdFn_<ZuFieldFn_Get(&T::ID)>>
+    ZuFieldRdFn_<ZuFieldFn_Get(&T::Get)>>
+
+#define ZuFieldFn(T, Fn) ZuFieldXFn(T, Fn, Fn, Fn)
+#define ZuFieldRdFn(T, Fn) ZuFieldXRdFn(T, Fn, Fn)
 
 #define ZuField_ID_(T, Type, ID, ...) ZuFieldID(T, ID)
 #define ZuField_ID(T, Args) ZuPP_Defer(ZuField_ID_)(T, ZuPP_Strip(Args))

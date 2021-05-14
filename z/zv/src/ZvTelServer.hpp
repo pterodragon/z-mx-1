@@ -425,10 +425,11 @@ private:
     unsigned yyyymmdd = date.yyyymmdd();
     unsigned seqNo = m_alertFile.alloc(m_alertPrefix, yyyymmdd);
     using namespace Zfb::Save;
+    auto date_ = dateTime(date);
     m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
 	  fbs::TelData_Alert,
 	  fbs::CreateAlert(m_fbb,
-	    dateTime(m_fbb, date), seqNo, alert->tid(),
+	    &date_, seqNo, alert->tid(),
 	    static_cast<fbs::Severity>(alert->severity()),
 	    str(m_fbb, m_alertBuf)).Union()));
     ZmRef<IOBuf> buf = m_fbb.buf();
@@ -593,7 +594,7 @@ private:
     heap->telemetry(data);
     if (!match(watch->filter, data.id)) return;
     m_fbb.Finish(fbs::CreateTelemetry(m_fbb,
-	  fbs::TelData_Heap, data.save(m_fbb).Union()));
+	  fbs::TelData_Heap, ZvFB<Heap>::save(&data, m_fbb).Union()));
     ZvCmdHdr{m_fbb, ZvCmd::ID::telemetry()};
     watch->link->send(m_fbb.buf());
   }
@@ -1170,7 +1171,7 @@ private:
   unsigned		m_alertMaxReplay;// max. replay in days
 
   // telemetry thread exclusive
-  Zfb::IOBuilder	m_fbb;
+  Zfb::IOBuilder<>	m_fbb;
   MxTbl			m_mxTbl;
   Queues		m_queues;
   Engines		m_engines;

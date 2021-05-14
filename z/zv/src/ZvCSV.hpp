@@ -114,8 +114,8 @@ template <typename T> class ZvCSV {
   ZvCSV &operator =(const ZvCSV &) = delete;
 
 public:
-  using Fields = typename ZuDecay<decltype(T::fields())>::T;
-  using Field = typename Fields::Elem;
+  using Fields = ZvVFieldArray;
+  using Field = ZvVField;
 
   using ColNames = ZtArray<ZuString>;
   using ColIndex = ZtArray<int>;
@@ -135,7 +135,7 @@ private:
 
 public:
   ZvCSV() {
-    m_fields = T::fields();
+    m_fields = ZvVFields<T>();
     for (unsigned i = 0, n = m_fields.length(); i < n; i++)
       m_columns.add(m_fields[i].id, &m_fields[i]);
   }
@@ -162,7 +162,7 @@ private:
   void writeHeaders(ZtArray<ZuString> &headers) const {
     unsigned n = m_fields.length();
     headers.size(n);
-    for (unsigned i = 0; i < n; i++) headers.push(m_fields[i]->id);
+    for (unsigned i = 0; i < n; i++) headers.push(m_fields[i].id);
   }
 
   void header(ColIndex &colIndex, ZuString hdr) const {
@@ -320,7 +320,7 @@ public:
 
     for (unsigned i = 0, n = colArray.length(); i < n; i++) {
       if (ZuLikely(i)) *row << ',';
-      *row << colArray[i]->id();
+      *row << colArray[i]->id;
     }
     *row << '\n';
     data << *row;

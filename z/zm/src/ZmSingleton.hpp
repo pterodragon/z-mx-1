@@ -70,7 +70,7 @@ template <typename T> struct ZmSingleton_<T, false> {
 };
 
 template <typename T, bool Construct = true> struct ZmSingletonCtor {
-  static T *fn() { return new T(); }
+  static T *fn() { return new T{}; }
 };
 template <typename T> struct ZmSingletonCtor<T, false> {
   static T *fn() { return nullptr; }

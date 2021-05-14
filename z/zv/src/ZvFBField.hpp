@@ -75,6 +75,7 @@ using ZvFBS = typename ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>::T;
   ZvFBField_Composite_(U, String,, ID, Flags, str, str)
 #define ZvFBFieldStringFn(U, ID, Flags) \
   ZvFBField_Composite_(U, String, Fn, ID, Flags, str, str)
+
 #define ZvFBFieldRdString(U, ID, Flags) \
   ZvFBField_ReadOnly_(U, String,, ID, Flags)
 #define ZvFBFieldRdStringFn(U, ID, Flags) \
@@ -84,6 +85,7 @@ using ZvFBS = typename ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>::T;
   ZvFBField_Composite_(U, Composite,, ID, Flags, SaveFn, LoadFn)
 #define ZvFBFieldCompositeFn(U, ID, Flags, SaveFn, LoadFn) \
   ZvFBField_Composite_(U, Composite, Fn, ID, Flags, SaveFn, LoadFn)
+
 #define ZvFBFieldRdComposite(U, ID, Flags) \
   ZvFBField_ReadOnly_(U, Composite,, ID, Flags)
 #define ZvFBFieldRdCompositeFn(U, ID, Flags) \
@@ -373,18 +375,18 @@ struct ZvFB {
 
   template <typename U>
   struct UpdatedFilter { enum {
-    OK = (U::Flags & (ZvFieldFlags::Primary | ZvFieldFlags::Update)) }; };
+    OK = !!(U::Flags & (ZvFieldFlags::Primary | ZvFieldFlags::Update)) }; };
   using UpdatedFields = typename ZuTypeGrep<UpdatedFilter, AllFields>::T;
 
   template <typename U>
-  struct CtorFilter { enum { OK = U::Flags & ZvFieldFlags::Ctor_ }; };
+  struct CtorFilter { enum { OK = !!(U::Flags & ZvFieldFlags::Ctor_) }; };
   using CtorFields_ = typename ZuTypeGrep<CtorFilter, AllFields>::T;
   template <typename U>
   struct CtorIndex { enum { I = ZvFieldFlags::CtorIndex(U::Flags) }; };
   using CtorFields = typename ZuTypeSort<CtorIndex, CtorFields_>::T;
 
   template <typename U>
-  struct InitFilter { enum { OK = !(U::Flags & ZvFieldFlags::Ctor) }; };
+  struct InitFilter { enum { OK = !(U::Flags & ZvFieldFlags::Ctor_) }; };
   using InitFields = typename ZuTypeGrep<InitFilter, AllFields>::T;
 
   static Zfb::Offset<FBS> save(const void *o, Zfb::Builder &fbb) {

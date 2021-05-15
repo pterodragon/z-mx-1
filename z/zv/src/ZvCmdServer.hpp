@@ -173,7 +173,7 @@ private:
     // FIXME - build hdr and send_ in callee if synchronous; schedule async send() with captured link ref if asynchronous
     this->app()->processUserDB(
 	m_user, m_interactive, fbs::GetRequest(data), m_fbb);
-    if (m_fbb.Size()) { // synchronous response
+    if (m_fbb.GetSize()) { // synchronous response
       ZvCmdHdr{m_fbb, ZvCmd::ID::userDB()};
       this->send_(m_fbb.buf());
     }
@@ -253,7 +253,7 @@ private:
 private:
   ZmScheduler::Timer	m_timer;
   int			m_state = State::Down;
-  Zfb::IOBuilder	m_fbb;
+  Zfb::IOBuilder<>	m_fbb;
   ZmRef<User>		m_user;
   bool			m_interactive = false;
 };

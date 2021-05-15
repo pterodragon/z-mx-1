@@ -304,22 +304,25 @@ struct ZuTypeMap<Map, ZuTypeList<Args...>> :
   public ZuTypeMap<Map, Args...> { };
 
 // grep
-template <bool, typename> struct ZuTypeGrep_;
-template <typename T0> struct ZuTypeGrep_<true, T0> {
+template <typename, bool> struct ZuTypeGrep_;
+template <typename T0> struct ZuTypeGrep_<T0, true> {
   using T = ZuTypeList<T0>;
 };
-template <typename T0> struct ZuTypeGrep_<false, T0> {
+template <typename T0> struct ZuTypeGrep_<T0, false> {
   using T = ZuTypeList<>;
 };
-template <template <typename> class, typename ...> struct ZuTypeGrep;
+template <template <typename> class, typename ...>
+struct ZuTypeGrep {
+  using T = ZuTypeList<>;
+};
 template <template <typename> class Filter, typename T0>
 struct ZuTypeGrep<Filter, T0> {
-  using T = typename ZuTypeGrep_<Filter<T0>::OK, T0>::T;
+  using T = typename ZuTypeGrep_<T0, Filter<T0>::OK>::T;
 };
 template <template <typename> class Filter, typename T0, typename ...Args>
 struct ZuTypeGrep<Filter, T0, Args...> {
   using T =
-    typename ZuTypeGrep_<Filter<T0>::OK, T0>::T::template Append<
+    typename ZuTypeGrep_<T0, Filter<T0>::OK>::T::template Append<
       typename ZuTypeGrep<Filter, Args...>::T>::T;
 };
 template <template <typename> class Filter, typename ...Args>

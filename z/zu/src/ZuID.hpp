@@ -118,18 +118,18 @@ public:
 
   operator uint64_t() const { return m_val; }
 
-  int cmp(uint64_t v) const {
-    return (m_val > v) - (m_val < v);
+  int cmp(ZuID v) const {
+    return (m_val > v.m_val) - (m_val < v.m_val);
   }
-  bool less(uint64_t v) const { return m_val < v; }
-  bool equals(uint64_t v) const { return m_val == v; }
+  bool less(ZuID v) const { return m_val < v.m_val; }
+  bool equals(ZuID v) const { return m_val == v.m_val; }
 
-  bool operator ==(uint64_t v) const { return m_val == v; }
-  bool operator !=(uint64_t v) const { return m_val != v; }
-  bool operator >(uint64_t v) const { return m_val > v; }
-  bool operator >=(uint64_t v) const { return m_val >= v; }
-  bool operator <(uint64_t v) const { return m_val < v; }
-  bool operator <=(uint64_t v) const { return m_val <= v; }
+  bool operator ==(ZuID v) const { return m_val == v.m_val; }
+  bool operator !=(ZuID v) const { return m_val != v.m_val; }
+  bool operator >(ZuID v) const { return m_val > v.m_val; }
+  bool operator >=(ZuID v) const { return m_val >= v.m_val; }
+  bool operator <(ZuID v) const { return m_val < v.m_val; }
+  bool operator <=(ZuID v) const { return m_val <= v.m_val; }
 
   bool operator !() const { return !m_val; }
 
@@ -137,7 +137,7 @@ public:
 
   void null() { m_val = 0; }
 
-  ZuID &update(const ZuID &id) {
+  ZuID &update(ZuID id) {
     if (*id) m_val = id.m_val;
     return *this;
   }

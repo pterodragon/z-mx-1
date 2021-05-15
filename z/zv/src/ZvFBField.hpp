@@ -45,9 +45,13 @@ using ZvFBS = typename ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>::T;
 #define ZvFBField_Name_(U, Type, ID, ...) U##_##ID##_FB
 #define ZvFBField_Name(U, Args) ZuPP_Defer(ZvFBField_Name_)(U, ZuPP_Strip(Args))
 
+// FIXME - X Fields
+// FIXME - use ZvFB and ZvFB_ namespaces more consistently
+// FIXME - ZvTelServer fixes (save(), saveDelta(), etc.)
+
 #define ZvFBField_ReadOnly_(U, Type, Fn, ID, ...) \
   struct ZvFBField_Name_(U, Type, ID) : \
-      public ZvField##Type##Fn(U, ID, __VA_ARGS__) { };
+      public ZvFieldRd##Type##Fn(U, ID, __VA_ARGS__) { };
 
 #define ZvFBField_Composite_(U, Type, Fn, ID, Flags, SaveFn, LoadFn) \
   struct ZvFBField_Name_(U, Type, ID) : \
@@ -125,6 +129,7 @@ using ZvFBS = typename ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>::T;
     using T = typename Base::T; \
     using FBB = ZvFBB<U>; \
     using FBS = ZvFBS<U>; \
+    enum { Inline = 1 }; \
     static void save(FBB &fbb, const void *o) { fbb.add_##ID(Base::get(o)); } \
     static auto load_(const FBS *o_) { return static_cast<T>(o_->ID()); } \
     static void load(void *o, const FBS *o_) { Base::set(o, load_(o_)); } \
@@ -155,6 +160,7 @@ using ZvFBS = typename ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>::T;
     using T = typename Base::T; \
     using FBB = ZvFBB<U>; \
     using FBS = ZvFBS<U>; \
+    enum { Inline = 1 }; \
     static void save(FBB &fbb, const void *o) { fbb.add_##ID(Base::get(o)); } \
     static auto load_(const FBS *o_) { return static_cast<T>(o_->ID()); } \
     static void load(void *o, const FBS *o_) { Base::set(o, load_(o_)); } \
@@ -184,6 +190,7 @@ using ZvFBS = typename ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>::T;
     using Base = ZvFieldDecimal##Fn(U, ID, Flags, Exponent); \
     using FBB = ZvFBB<U>; \
     using FBS = ZvFBS<U>; \
+    enum { Inline = 1 }; \
     static void save(FBB &fbb, const void *o) { \
       using namespace Zfb::Save; \
       auto v = decimal(Base::get(o)); \
@@ -223,6 +230,7 @@ using ZvFBS = typename ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>::T;
     using T = typename Base::T; \
     using FBB = ZvFBB<U>; \
     using FBS = ZvFBS<U>; \
+    enum { Inline = 1 }; \
     static void save(FBB &fbb, const void *o) { \
       fbb.add_##ID(static_cast<Map::FBS>(Base::get(o))); \
     } \
@@ -247,6 +255,7 @@ using ZvFBS = typename ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>::T;
     using T = typename Base::T; \
     using FBB = ZvFBB<U>; \
     using FBS = ZvFBS<U>; \
+    enum { Inline = 1 }; \
     static void save(FBB &fbb, const void *o) { fbb.add_##ID(Base::get(o)); } \
     static auto load_(const FBS *o_) { return static_cast<T>(o_->ID()); } \
     static void load(void *o, const FBS *o_) { Base::set(o, load_(o_)); } \
@@ -268,6 +277,7 @@ using ZvFBS = typename ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>::T;
     using Base = ZvFieldTime##Fn(U, ID, Flags); \
     using FBB = ZvFBB<U>; \
     using FBS = ZvFBS<U>; \
+    enum { Inline = 1 }; \
     static void save(FBB &fbb, const void *o) { \
       using namespace Zfb::Save; \
       auto v = dateTime(Base::get(o)); \
@@ -308,7 +318,7 @@ template <typename T> ZuTypeList<> ZvFBFieldList_(T *); // default
       ZuTypeList<ZuPP_Eval(ZuPP_MapArgComma(ZvFBField_Name, U, __VA_ARGS__))>; \
   } \
   U##_Fields ZvFBFieldList_(U *); \
-  U##_Fields ZvFieldList_(U *);
+  U##_Fields ZvFieldList_(U *)
 
 template <typename T>
 using ZvFBFieldList = decltype(ZvFBFieldList_(ZuDeclVal<T *>()));
@@ -320,22 +330,21 @@ template <typename T> using Offset = Zfb::Offset<T>;
 template <typename Field> struct HasOffset {
   enum { OK =
     Field::Type == ZvFieldType::String ||
-    (Field::Type == ZvFieldType::Composite && !Field::Inline) ||
-    Field::Type == ZvFieldType::Decimal ||
-    Field::Type == ZvFieldType::Time };
+    (Field::Type == ZvFieldType::Composite && !Field::Inline)
+  };
 };
 template <
   typename OffsetFieldList, typename Field, bool = HasOffset<Field>::OK>
 struct SaveField {
   template <typename FBB>
-  static void save(const void *o, FBB &fbb, const Offset<void> *) {
+  static void save(FBB &fbb, const void *o, const Offset<void> *) {
     Field::save(fbb, o);
   }
 };
 template <typename OffsetFieldList, typename Field>
 struct SaveField<OffsetFieldList, Field, true> {
   template <typename FBB>
-  static void save(const void *, FBB &fbb, const Offset<void> *offsets) {
+  static void save(FBB &fbb, const void *, const Offset<void> *offsets) {
     using OffsetIndex = ZuTypeIndex<Field, OffsetFieldList>;
     Field::save(fbb, offsets[OffsetIndex::I]);
   }
@@ -344,27 +353,27 @@ template <typename T, typename FieldList>
 struct SaveFieldList {
   using FBB = ZvFBB<T>;
   using FBS = ZvFBS<T>;
-  static Zfb::Offset<FBS> save(const void *o, Zfb::Builder &fbb) {
+  static Zfb::Offset<FBS> save(Zfb::Builder &fbb_, const void *o) {
     using OffsetFieldList = typename ZuTypeGrep<HasOffset, FieldList>::T;
     Offset<void> offsets[OffsetFieldList::N];
     ZuTypeAll<OffsetFieldList>::invoke(
-	[o, &fbb, offsets = &offsets[0]]<typename Field>() {
+	[o, &fbb_, offsets = &offsets[0]]<typename Field>() {
 	  using OffsetIndex = ZuTypeIndex<Field, OffsetFieldList>;
-	  offsets[OffsetIndex::I] = Field::save(o, fbb).Union();
+	  offsets[OffsetIndex::I] = Field::save(fbb_, o).Union();
 	});
-    FBB b{fbb};
+    FBB fbb{fbb_};
     ZuTypeAll<FieldList>::invoke(
-	[o, &b, offsets = &offsets[0]]<typename Field>() {
-	  SaveField<OffsetFieldList, Field>::save(o, b, offsets);
+	[o, &fbb, offsets = &offsets[0]]<typename Field>() {
+	  SaveField<OffsetFieldList, Field>::save(fbb, o, offsets);
 	});
-    return b.Finish();
+    return fbb.Finish();
   }
 };
 
 } // namespace ZvFB_Save
 
 template <typename T>
-struct ZvFB {
+struct ZvFB_ {
   using FBB = ZvFBB<T>;
   using FBS = ZvFBS<T>;
   using FieldList = ZvFBFieldList<T>;
@@ -389,13 +398,13 @@ struct ZvFB {
   struct InitFilter { enum { OK = !(U::Flags & ZvFieldFlags::Ctor_) }; };
   using InitFields = typename ZuTypeGrep<InitFilter, AllFields>::T;
 
-  static Zfb::Offset<FBS> save(const void *o, Zfb::Builder &fbb) {
+  static Zfb::Offset<FBS> save(Zfb::Builder &fbb, const void *o) {
     using namespace ZvFB_Save;
-    return SaveFieldList<T, AllFields>::save(o, fbb);
+    return SaveFieldList<T, AllFields>::save(fbb, o);
   }
-  static Zfb::Offset<FBS> saveUpdate(const void *o, Zfb::Builder &fbb) {
+  static Zfb::Offset<FBS> saveUpdate(Zfb::Builder &fbb, const void *o) {
     using namespace ZvFB_Save;
-    return SaveFieldList<T, UpdatedFields>::save(o, fbb);
+    return SaveFieldList<T, UpdatedFields>::save(fbb, o);
   }
   static void load(void *o, const FBS *o_) {
     ZuTypeAll<AllFields>::invoke(
@@ -422,5 +431,27 @@ struct ZvFB {
     }
   };
 };
+
+namespace ZvFB {
+  template <typename T>
+  inline auto save(Zfb::Builder &fbb, const T &o) {
+    return ZvFB_<T>::save(fbb, &o);
+  }
+  template <typename T>
+  inline auto saveUpdate(Zfb::Builder &fbb, const T &o) {
+    return ZvFB_<T>::saveUpdate(fbb, &o);
+  }
+
+  template <typename T>
+  inline void load(T &o, const FBS *o_) {
+    ZvFB_<T>::load(&o, o_);
+  }
+  template <typename T>
+  inline void loadUpdate(T &o, const FBS *o_) {
+    ZvFB_<T>::loadUpdate(&o, o_);
+  }
+
+  template <typename T> using Load = typename ZvFB<T>::Load;
+}
 
 #endif /* ZvFBField_HPP */

@@ -60,7 +60,7 @@ using Builder = FlatBufferBuilder;
 template <unsigned Size_ = ZiIOBuf<>::Size>
 class IOBuilder : public Allocator, public Builder {
 public:
-  enum { Size = Size_ };
+  enum { Size = Size_ }; // Size conflicts with Builder::Size()
   enum { Align = 8 };
   using IOBuf = ZiIOBuf<Size>;
 

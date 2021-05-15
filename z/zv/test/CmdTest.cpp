@@ -67,7 +67,7 @@ public:
     data.version = "1.0";
     data.uptime = m_uptime;
     data.role = AppRole::Dev;
-    data.rag(RAG::Green);
+    data.rag = RAG::Green;
   }
 
 private:

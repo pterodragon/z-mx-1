@@ -67,13 +67,13 @@ public:
   ZiIP &operator =(uint32_t n) { s_addr = htonl(n); return *this; }
 
   template <typename S>
-  ZiIP(S &&s, typename ZuIsString<S>::T *_ = 0) {
+  ZiIP(S &&s, ZuIsString<S> *_ = 0) {
     if (!s) { s_addr = 0; return; }
     ZeError e;
     if (resolve(ZuFwd<S>(s), &e) != OK) throw e;
   }
   template <typename S>
-  typename ZuIsString<S, ZiIP &>::T &operator =(S &&s) {
+  ZuIsString<S, ZiIP &> &operator =(S &&s) {
     if (!s) { s_addr = 0; return *this; }
     ZeError e;
     if (resolve(ZuFwd<S>(s), &e) != OK) throw e;
@@ -124,7 +124,7 @@ private:
 #endif
 public:
   template <typename S>
-  typename ZuIsString<S, int>::T resolve(S &&s, ZeError *e = 0) {
+  ZuIsString<S, int> resolve(S &&s, ZeError *e = 0) {
     return resolve_(ZuString{ZuFwd<S>(s)}, e);
   }
   Hostname name(ZeError *e = 0);

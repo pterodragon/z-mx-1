@@ -23,8 +23,8 @@
 
 using namespace Zdf;
 
-DataFrame::DataFrame(ZvFieldArray fields, ZuString name, bool timeIndex) :
-    m_name(name)
+DataFrame::DataFrame(ZvVFieldArray fields, ZuString name, bool timeIndex) :
+    m_name{name}
 {
   bool indexed = timeIndex;
   unsigned n = fields.length();
@@ -114,5 +114,6 @@ bool DataFrame::save(ZeError *e)
 Zfb::Offset<fbs::DataFrame> DataFrame::save_(Zfb::Builder &fbb)
 {
   using namespace Zfb::Save;
-  return fbs::CreateDataFrame(fbb, dateTime(fbb, ZtDate{m_epoch}));
+  auto v = dateTime(ZtDate{m_epoch});
+  return fbs::CreateDataFrame(fbb, &v);
 }

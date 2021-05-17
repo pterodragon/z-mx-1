@@ -86,14 +86,14 @@ private:
       ZuEquivChar<typename ZuTraits<U>::Elem, V>::Same };
   };
   template <typename U, typename R = void>
-  struct MatchString : public ZuIfT<IsString<U>::OK, R> { };
+  using MatchString = ZuIfT<IsString<U>::OK, R>;
 
   // from individual char
   template <typename U, typename V = Char> struct IsChar {
     enum { OK = ZuEquivChar<U, V>::Same };
   };
   template <typename U, typename R = void>
-  struct MatchChar : public ZuIfT<IsChar<U>::OK, R> { };
+  using MatchChar = ZuIfT<IsChar<U>::OK, R>;
 
   // from char2 string (requires conversion)
   template <typename U, typename V = Char2> struct IsChar2String {
@@ -101,7 +101,7 @@ private:
       ZuEquivChar<typename ZuTraits<U>::Elem, V>::Same };
   };
   template <typename U, typename R = void>
-  struct MatchChar2String : public ZuIfT<IsChar2String<U>::OK, R> { };
+  using MatchChar2String = ZuIfT<IsChar2String<U>::OK, R>;
 
   // from individual char2 (requires conversion, char->wchar_t only)
   template <typename U, typename V = Char2> struct IsChar2 {
@@ -109,19 +109,19 @@ private:
       !ZuEquivChar<U, wchar_t>::Same };
   };
   template <typename U, typename R = void>
-  struct MatchChar2 : public ZuIfT<IsChar2<U>::OK, R> { };
+  using MatchChar2 = ZuIfT<IsChar2<U>::OK, R>;
 
   // from printable type (if this is a char array)
   template <typename U, typename V = Char> struct IsPDelegate {
     enum { OK = ZuEquivChar<char, V>::Same && ZuPrint<U>::Delegate };
   };
   template <typename U, typename R = void>
-  struct MatchPDelegate : public ZuIfT<IsPDelegate<U>::OK, R> { };
+  using MatchPDelegate = ZuIfT<IsPDelegate<U>::OK, R>;
   template <typename U, typename V = Char> struct IsPBuffer {
     enum { OK = ZuEquivChar<char, V>::Same && ZuPrint<U>::Buffer };
   };
   template <typename U, typename R = void>
-  struct MatchPBuffer : public ZuIfT<IsPBuffer<U>::OK, R> { };
+  using MatchPBuffer = ZuIfT<IsPBuffer<U>::OK, R>;
 
   // from real primitive types other than chars (if this is a char string)
   template <typename U, typename V = Char> struct IsReal {
@@ -130,7 +130,7 @@ private:
       !ZuTraits<U>::IsArray };
   };
   template <typename U, typename R = void>
-  struct MatchReal : public ZuIfT<IsReal<U>::OK, R> { };
+  using MatchReal = ZuIfT<IsReal<U>::OK, R>;
 
 protected:
   ZuStringN_() : m_length(0) { data()[0] = 0; }
@@ -157,29 +157,29 @@ protected:
     memset(data() + (m_length = length), 0, (N - length) * sizeof(Char));
   }
 
-  template <typename S> typename MatchString<S>::T init(S &&s_) {
+  template <typename S> MatchString<S> init(S &&s_) {
     ZuArray<const Char> s(s_);
     init(s.data(), s.length());
   }
 
-  template <typename C> typename MatchChar<C>::T init(C c) {
+  template <typename C> MatchChar<C> init(C c) {
     auto data = this->data();
     data[0] = c;
     data[m_length = 1] = 0;
   }
 
-  template <typename S> typename MatchChar2String<S>::T init(S &&s) {
+  template <typename S> MatchChar2String<S> init(S &&s) {
     data()[m_length = ZuUTF<Char, Char2>::cvt({data(), M}, s)] = 0;
   }
-  template <typename C> typename MatchChar2<C>::T init(C c) {
+  template <typename C> MatchChar2<C> init(C c) {
     data()[m_length = ZuUTF<Char, Char2>::cvt({data(), M}, {&c, 1})] = 0;
   }
 
-  template <typename P> typename MatchPDelegate<P>::T init(const P &p) {
+  template <typename P> MatchPDelegate<P> init(const P &p) {
     m_length = 0;
     ZuPrint<P>::print(*static_cast<StringN *>(this), p);
   }
-  template <typename P> typename MatchPBuffer<P>::T init(const P &p) {
+  template <typename P> MatchPBuffer<P> init(const P &p) {
     unsigned length = ZuPrint<P>::length(p);
     if (length >= N)
       data()[m_length = 0] = 0;
@@ -187,7 +187,7 @@ protected:
       data()[m_length = ZuPrint<P>::print(data(), length, p)] = 0;
   }
 
-  template <typename V> typename MatchReal<V>::T init(V v) {
+  template <typename V> MatchReal<V> init(V v) {
     init(ZuBoxed(v));
   }
 
@@ -197,12 +197,12 @@ protected:
     data()[m_length += length] = 0;
   }
 
-  template <typename S> typename MatchString<S>::T append_(S &&s_) {
+  template <typename S> MatchString<S> append_(S &&s_) {
     ZuArray<const Char> s{s_};
     append(s.data(), s.length());
   }
 
-  template <typename C> typename MatchChar<C>::T append_(C c) {
+  template <typename C> MatchChar<C> append_(C c) {
     if (m_length < M) {
       auto data = this->data();
       data[m_length++] = c;
@@ -211,30 +211,30 @@ protected:
   }
 
   template <typename S>
-  typename MatchChar2String<S>::T append_(S &&s) {
+  MatchChar2String<S> append_(S &&s) {
     if (m_length < M)
       data()[m_length = ZuUTF<Char, Char2>::cvt(
 	  {data() + m_length, M - m_length}, s)] = 0;
   }
 
-  template <typename C> typename MatchChar2<C>::T append_(C c) {
+  template <typename C> MatchChar2<C> append_(C c) {
     if (m_length < M)
       data()[m_length += ZuUTF<Char, Char2>::cvt(
 	  {data() + m_length, M - m_length}, {&c, 1})] = 0;
   }
 
   template <typename P>
-  typename MatchPDelegate<P>::T append_(const P &p) {
+  MatchPDelegate<P> append_(const P &p) {
     ZuPrint<P>::print(*static_cast<StringN *>(this), p);
   }
   template <typename P>
-  typename MatchPBuffer<P>::T append_(const P &p) {
+  MatchPBuffer<P> append_(const P &p) {
     unsigned length = ZuPrint<P>::length(p);
     if (m_length + length >= N) return;
     data()[m_length += ZuPrint<P>::print(data() + m_length, length, p)] = 0;
   }
 
-  template <typename V> typename MatchReal<V>::T append_(V v) {
+  template <typename V> MatchReal<V> append_(V v) {
     append_(ZuBoxed(v));
   }
 
@@ -453,7 +453,7 @@ private:
       ZuConversion<U, size_t>::Same };
   };
   template <typename U, typename R = void>
-  struct MatchCtorLength : public ZuIfT<IsCtorLength<U>::OK, R> { };
+  using MatchCtorLength = ZuIfT<IsCtorLength<U>::OK, R>;
 
   // constructor arg
   template <typename U> struct IsCtorArg {
@@ -462,7 +462,7 @@ private:
       !ZuConversion<Base, U>::Base };
   };
   template <typename U, typename R = void>
-  struct MatchCtorArg : public ZuIfT<IsCtorArg<U>::OK, R> { };
+  using MatchCtorArg = ZuIfT<IsCtorArg<U>::OK, R>;
 
 public:
   ZuStringN() { }
@@ -511,8 +511,7 @@ public:
 
   // miscellaneous types handled by base class
   template <typename S>
-  ZuStringN(S &&s,
-      typename MatchCtorArg<S>::T *_ = 0) : Base(Base::Nop) {
+  ZuStringN(S &&s, MatchCtorArg<S> *_ = 0) : Base(Base::Nop) {
     this->init(ZuFwd<S>(s));
   }
   template <typename S>
@@ -533,7 +532,7 @@ public:
 
   // length
   template <typename L>
-  ZuStringN(L l, typename MatchCtorLength<L>::T *_ = 0) : Base(l) { }
+  ZuStringN(L l, MatchCtorLength<L> *_ = 0) : Base(l) { }
 
   // traits
   friend typename Base::Traits ZuTraitsType(ZuStringN *);
@@ -566,7 +565,7 @@ private:
       ZuConversion<U, size_t>::Same };
   };
   template <typename U, typename R = void>
-  struct MatchCtorLength : public ZuIfT<IsCtorLength<U>::OK, R> { };
+  using MatchCtorLength = ZuIfT<IsCtorLength<U>::OK, R>;
 
   // constructor arg
   template <typename U> struct IsCtorArg {
@@ -575,7 +574,7 @@ private:
       !ZuConversion<Base, U>::Base };
   };
   template <typename U, typename R = void>
-  struct MatchCtorArg : public ZuIfT<IsCtorArg<U>::OK, R> { };
+  using MatchCtorArg = ZuIfT<IsCtorArg<U>::OK, R>;
 
 public:
   ZuWStringN() { }
@@ -623,8 +622,7 @@ public:
 
   // miscellaneous types handled by base class
   template <typename S>
-  ZuWStringN(S &&s,
-      typename MatchCtorArg<S>::T *_ = 0) : Base(Base::Nop) {
+  ZuWStringN(S &&s, MatchCtorArg<S> *_ = 0) : Base(Base::Nop) {
     this->init(ZuFwd<S>(s));
   }
   template <typename S>
@@ -645,7 +643,7 @@ public:
 
   // length
   template <typename L>
-  ZuWStringN(L l, typename MatchCtorLength<L>::T *_ = 0) : Base(l) { }
+  ZuWStringN(L l, MatchCtorLength<L> *_ = 0) : Base(l) { }
 
   // traits
   friend typename Base::Traits ZuTraitsType(ZuWStringN *);

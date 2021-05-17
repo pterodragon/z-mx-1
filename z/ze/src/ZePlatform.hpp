@@ -166,32 +166,32 @@ private:
       ZuConversion<typename ZuTraits<U>::Elem, const char>::Same };
   };
   template <typename U, typename R = void>
-  struct MatchLiteral : public ZuIfT<IsLiteral<U>::OK, R> { };
+  using MatchLiteral = ZuIfT<IsLiteral<U>::OK, R>;
 
   template <typename U> struct IsPrint {
     enum { OK = !IsLiteral<U>::OK &&
       (ZuTraits<U>::IsString || ZuPrint<U>::OK) };
   };
   template <typename U, typename R = void>
-  struct MatchPrint : public ZuIfT<IsPrint<U>::OK, R> { };
+  using MatchPrint = ZuIfT<IsPrint<U>::OK, R>;
 
   template <typename U, typename R = void>
-  struct MatchFn : public ZuIfT<!IsLiteral<U>::OK && !IsPrint<U>::OK, R> { };
+  using MatchFn = ZuIfT<!IsLiteral<U>::OK && !IsPrint<U>::OK, R>;
 
 public:
   // from string literal
   template <typename P>
-  ZeMessageFn_(P &&p, typename MatchLiteral<P>::T *_ = 0) :
+  ZeMessageFn_(P &&p, MatchLiteral<P> *_ = 0) :
     Fn([p = ZuString(p)](const Event &, ZmStream &s) { s << p; }) { }
 
   // from something printable (that's not a string literal)
   template <typename P>
-  ZeMessageFn_(P &&p, typename MatchPrint<P>::T *_ = 0) :
+  ZeMessageFn_(P &&p, MatchPrint<P> *_ = 0) :
     Fn([p = ZuFwd<P>(p)](const Event &, ZmStream &s) { s << p; }) { }
 
   // fwd anything else to ZmFn
   template <typename P>
-  ZeMessageFn_(P &&p, typename MatchFn<P>::T *_ = 0) :
+  ZeMessageFn_(P &&p, MatchFn<P> *_ = 0) :
     Fn(ZuFwd<P>(p)) { }
   template <typename P1, typename P2, typename ...Args>
   ZeMessageFn_(P1 &&p1, P2 &&p2, Args &&... args) :

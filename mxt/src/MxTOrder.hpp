@@ -277,23 +277,23 @@ template <typename AppTypes> struct MxTAppTypes {
 #endif
 
     template <typename Update>
-    typename ZuIs<Legs_, Update>::T update(const Update &u) {
+    ZuIs<Legs_, Update> update(const Update &u) {
       unsigned n = nLegs();
       for (unsigned i = 0; i < n; i++) legs[i].update(u.legs[i]);
     }
     template <typename Update>
-    typename ZuIsNot<Legs_, Update>::T update(const Update &u) { }
+    ZuIsNot<Legs_, Update> update(const Update &u) { }
 
     // calculates worst-case exposure due to potential modification/update
     template <typename Update>
-    typename ZuIs<Legs_, Update>::T expose(const Update &u) {
+    ZuIs<Legs_, Update> expose(const Update &u) {
       unsigned n = nLegs();
       for (unsigned i = 0; i < n; i++) legs[i].expose(u.legs[i]);
     }
 
     // returns true if update u is pending on fills
     template <typename Update>
-    typename ZuIs<Legs_, Update, bool>::T pendingFill(const Update &u) {
+    ZuIs<Legs_, Update, bool> pendingFill(const Update &u) {
       unsigned n = nLegs();
       for (unsigned i = 0; i < n; i++)
 	if (legs[i].cumQty < u.legs[i].cumQty) return true;
@@ -332,11 +332,11 @@ template <typename AppTypes> struct MxTAppTypes {
     uint8_t		pad_0[3];
 
     template <typename Update>
-    typename ZuIs<CanceledLeg_, Update>::T update(const Update &u) {
+    ZuIs<CanceledLeg_, Update> update(const Update &u) {
       qtyNDP.update(u.qtyNDP);
     }
     template <typename Update>
-    typename ZuIsNot<CanceledLeg_, Update>::T update(const Update &u) { }
+    ZuIsNot<CanceledLeg_, Update> update(const Update &u) { }
 
     template <typename S> void print(S &s) const {
       s << "qtyNDP=" << qtyNDP
@@ -348,12 +348,12 @@ template <typename AppTypes> struct MxTAppTypes {
     MxValue		orderQty;
 
     template <typename Update>
-    typename ZuIs<CancelLeg_, Update>::T update(const Update &u) {
+    ZuIs<CancelLeg_, Update> update(const Update &u) {
       CanceledLeg_::update(u);
       orderQty.update(u.orderQty);
     }
     template <typename Update>
-    typename ZuIsNot<CancelLeg_, Update>::T update(const Update &u) {
+    ZuIsNot<CancelLeg_, Update> update(const Update &u) {
       CanceledLeg_::update(u);
     }
 
@@ -404,7 +404,7 @@ template <typename AppTypes> struct MxTAppTypes {
     uint8_t		pad_0[1];
 
     template <typename Update>
-    typename ZuIs<ModifyLeg_, Update>::T update(const Update &u) {
+    ZuIs<ModifyLeg_, Update> update(const Update &u) {
       CancelLeg_::update(u);
       px.update(u.px);
       side.update(u.side);
@@ -412,7 +412,7 @@ template <typename AppTypes> struct MxTAppTypes {
       pxNDP.update(u.pxNDP);
     }
     template <typename Update>
-    typename ZuIsNot<ModifyLeg_, Update>::T update(const Update &u) {
+    ZuIsNot<ModifyLeg_, Update> update(const Update &u) {
       CancelLeg_::update(u);
     }
 
@@ -447,12 +447,12 @@ template <typename AppTypes> struct MxTAppTypes {
     uint8_t		pad_0[3];
 
     template <typename Update>
-    typename ZuIs<Modify__, Update>::T update(const Update &u) {
+    ZuIs<Modify__, Update> update(const Update &u) {
       Cancel_<Leg>::update(u); // takes care of legs
       tif.update(u.tif);
     }
     template <typename Update>
-    typename ZuIsNot<Modify__, Update>::T update(const Update &u) {
+    ZuIsNot<Modify__, Update> update(const Update &u) {
       Cancel_<Leg>::update(u);
     }
 
@@ -620,13 +620,13 @@ template <typename AppTypes> struct MxTAppTypes {
     MxEnum		rejReason;	// MxTRejReason
 
     template <typename Update>
-    typename ZuIs<AnyReject, Update>::T update(const Update &u) {
+    ZuIs<AnyReject, Update> update(const Update &u) {
       AppTypes::Event::update(u);
       rejCode = u.rejCode;
       rejReason = u.rejReason;
     }
     template <typename Update>
-    typename ZuIsNot<AnyReject, Update>::T update(const Update &u) {
+    ZuIsNot<AnyReject, Update> update(const Update &u) {
       AppTypes::Event::update(u);
     }
 
@@ -812,15 +812,15 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
     }
   public:
     template <typename Data_>
-    Txn(const Data_ &data, typename ZuIfT<
+    Txn(const Data_ &data, ZuIfT<
 	ZuConversion<Data__, Data_>::Base &&
-	sizeof(typename Data_::T) <= sizeof(Largest)>::T *_ = 0) {
+	sizeof(typename Data_::T) <= sizeof(Largest)> *_ = 0) {
       initData(data);
     }
     template <typename Data_>
-    typename ZuIfT<
+    ZuIfT<
       ZuConversion<Data__, Data_>::Base &&
-      sizeof(typename Data_::T) <= sizeof(Largest), Txn &>::T
+      sizeof(typename Data_::T) <= sizeof(Largest), Txn &>
     operator =(const Data_ &data) {
       initData(data);
       return *this;
@@ -877,21 +877,21 @@ template <typename AppTypes> struct MxTTxnTypes : public AppTypes {
   using AckTxn = Txn<Event>;		// ack event header
 
   // ExecTxn can contain a reject/execution(notice) (acks update OMC)
-  typedef typename ZuLargest<
+  typedef ZuLargest<
     Reject, ModReject, CxlReject,
-    Fill, Closed>::T Exec_Largest;
+    Fill, Closed> Exec_Largest;
   using ExecTxn = Txn<Exec_Largest>;
 
   // ClosedTxn can contain a reject, cancel ack, or closed event
-  typedef typename ZuLargest<
-    Reject, Event, Closed>::T Closed_Largest;
+  typedef ZuLargest<
+    Reject, Event, Closed> Closed_Largest;
   using ClosedTxn = Txn<Closed_Largest>;
 
   // AnyTxn can contain any request or event
-  typedef typename ZuLargest<
+  typedef ZuLargest<
     NewOrder, Modify, Cancel,
     Ordered, Modified, Canceled,
-    Exec_Largest>::T Any_Largest;
+    Exec_Largest> Any_Largest;
   using AnyTxn = Txn<Any_Largest>;
 
   // Order - open order state including pending modify/cancel

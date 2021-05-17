@@ -25,17 +25,15 @@ void fail(const char *s, int64_t i) { print(s, i); }
 #define CHECK2(x, y) ((x == y) ? ok("OK  " #x, x) : fail("NOK " #x, x))
 
 struct Frame {
-  static const ZvFieldArray fields() noexcept;
   uint64_t	v1;
   ZuFixedVal	v2;
 };
-inline const ZvFieldArray Frame::fields() noexcept {
-  ZvFields(Frame,
-      // (Int, v1, Series | Index | Delta2),
-      (Int, v1, Series | Index | Delta),
-      // (Int, v1, Series | Index),
-      (Fixed, v2, Series | Delta, 9));
-}
+ZvFields(Frame,
+    // (Int, v1, Series | Index | Delta2),
+    (Int, v1, (Ctor(0), Series, Index, Delta)),
+    // (Int, v1, Series | Index),
+    (Fixed, v2, (Ctor(1), Series, Delta), 9));
+
 void usage() {
   std::cerr << "usage: ZdfTest mem|load|save\n" << std::flush;
   ::exit(1);
@@ -69,7 +67,7 @@ int main(int argc, char **argv)
 	"writeThread 1\n", false);
     fileMgr.init(&sched, cf);
   }
-  DataFrame df(Frame::fields(), "frame");
+  DataFrame df{ZvVFields<Frame>(), "frame"};
   if (mode == Mem)
     df.init(&memMgr);
   else

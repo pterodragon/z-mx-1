@@ -19,7 +19,7 @@
 
 // compile-time determination of maximum sizeof()
 //
-// ZuLargest<T1, T2>::T evaluates to whichever of T1 or T2 is largest
+// ZuLargest<T1, T2> evaluates to whichever of T1 or T2 is largest
 
 #ifndef ZuLargest_HPP
 #define ZuLargest_HPP
@@ -35,13 +35,14 @@
 #include <zlib/ZuIf.hpp>
 #include <zlib/ZuNull.hpp>
 
-template <typename ...Args> struct ZuLargest;
-template <typename Arg0> struct ZuLargest<Arg0> {
+template <typename ...Args> struct ZuLargest_;
+template <typename Arg0> struct ZuLargest_<Arg0> {
   using T = Arg0;
 };
-template <typename Arg0, typename ...Args> struct ZuLargest<Arg0, Args...> {
-  using T = typename ZuIf<Arg0, typename ZuLargest<Args...>::T,
-	(sizeof(Arg0) > sizeof(typename ZuLargest<Args...>::T))>::T;
+template <typename Arg0, typename ...Args> struct ZuLargest_<Arg0, Args...> {
+  using T = ZuIf<Arg0, typename ZuLargest_<Args...>::T,
+	(sizeof(Arg0) > sizeof(typename ZuLargest_<Args...>::T))>;
 };
+template <typename ...Args> using ZuLargest = ZuLargest_<Args...>;
 
 #endif /* ZuLargest_HPP */

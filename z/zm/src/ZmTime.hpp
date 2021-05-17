@@ -73,23 +73,20 @@ public:
       ZuConversion<long, T>::Same ||
       ZuConversion<time_t, T>::Same };
   };
-  template <typename T, typename R = void, bool OK = IsInt<T>::OK>
-  struct MatchInt;
-  template <typename T_, typename R> struct MatchInt<T_, R, 1> {
-    using T = T_;
-  };
+  template <typename T, typename R = void>
+  using MatchInt = ZuIfT<IsInt<T>::OK, R>;
 
 public:
   ZmTime(Now_) { now(); }
   template <typename T>
-  ZmTime(Now_, T i, typename MatchInt<T>::T *_ = 0) {
+  ZmTime(Now_, T i, MatchInt<T> *_ = 0) {
     now(i);
   }
   ZmTime(Now_, double d) { now(d); }
   ZmTime(Now_, const ZmTime &d) { now(d); }
 
   template <typename T>
-  ZmTime(T v, typename MatchInt<T>::T *_ = 0) :
+  ZmTime(T v, MatchInt<T> *_ = 0) :
     timespec{v, 0} { }
   ZmTime(time_t t, long n) : timespec{t, n} { }
 
@@ -136,7 +133,7 @@ public:
 #endif /* !_WIN32 */
 
   template <typename T>
-  typename MatchInt<T, ZmTime &>::T now(T i) { return now() += i; }
+  MatchInt<T, ZmTime &> now(T i) { return now() += i; }
   ZmTime &now(double d) { return now() += d; }
   ZmTime &now(const ZmTime &d) { return now() += d; }
 
@@ -194,7 +191,7 @@ public:
   }
 
   template <typename T>
-  typename MatchInt<T, ZmTime>::T operator +(T v) const {
+  MatchInt<T, ZmTime> operator +(T v) const {
     return ZmTime{tv_sec + v, tv_nsec};
   }
   ZmTime operator +(double d) const {
@@ -206,7 +203,7 @@ public:
     return t;
   }
   template <typename T>
-  typename MatchInt<T, ZmTime &>::T operator +=(T v) {
+  MatchInt<T, ZmTime &> operator +=(T v) {
     tv_sec += v;
     return *this;
   }
@@ -219,7 +216,7 @@ public:
     return *this;
   }
   template <typename T>
-  typename MatchInt<T, ZmTime>::T operator -(T v) const {
+  MatchInt<T, ZmTime> operator -(T v) const {
     return ZmTime{tv_sec - v, tv_nsec};
   }
   ZmTime operator -(double d) const {
@@ -231,7 +228,7 @@ public:
     return t;
   }
   template <typename T>
-  typename MatchInt<T, ZmTime &>::T operator -=(T v) {
+  MatchInt<T, ZmTime &> operator -=(T v) {
     tv_sec -= v;
     return *this;
   }

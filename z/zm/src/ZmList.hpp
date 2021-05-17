@@ -155,7 +155,7 @@ public:
       public ZuIf<NullObject, Object,
 	ZuConversion<ZuNull, Object>::Is ||
 	ZuConversion<ZuShadow, Object>::Is ||
-	(NodeIsItem && ZuConversion<Object, Item>::Is)>::T,
+	(NodeIsItem && ZuConversion<Object, Item>::Is)>,
       public Heap {
     NodeFn(const NodeFn &);
     NodeFn &operator =(const NodeFn &);	// prevent mis-use
@@ -314,7 +314,7 @@ friend ReadIterator;
     return node;
   }
   template <typename Index_>
-  typename ZuNotConvertible<Index_, Node *, NodeRef>::T
+  ZuNotConvertible<Index_, Node *, NodeRef>
       del(const Index_ &index) {
     Guard guard(m_lock);
     Node *node;
@@ -340,7 +340,7 @@ friend ReadIterator;
   }
 
   template <typename NodeRef_>
-  typename ZuConvertible<NodeRef_, NodeRef>::T
+  ZuConvertible<NodeRef_, NodeRef>
       push(const NodeRef_ &node_) {
     const NodeRef &node = node_;
     Guard guard(m_lock);
@@ -356,7 +356,7 @@ friend ReadIterator;
     ++m_count;
   }
   template <typename Item_>
-  typename ZuNotConvertible<typename ZuDeref<Item_>::T, NodeRef>::T
+  ZuNotConvertible<ZuDeref<Item_>, NodeRef>
       push(Item_ &&item) {
     push(NodeRef(new Node(ZuFwd<Item_>(item))));
   }
@@ -406,7 +406,7 @@ friend ReadIterator;
     return node->Node::item();
   }
   template <typename NodeRef_>
-  typename ZuConvertible<NodeRef_, NodeRef>::T
+  ZuConvertible<NodeRef_, NodeRef>
       unshift(const NodeRef_ &node_) {
     const NodeRef &node = node_;
     Guard guard(m_lock);
@@ -422,7 +422,7 @@ friend ReadIterator;
     ++m_count;
   }
   template <typename Item_>
-  typename ZuNotConvertible<typename ZuDeref<Item_>::T, NodeRef>::T
+  ZuNotConvertible<ZuDeref<Item_>, NodeRef>
   unshift(Item_ &&item) {
     unshift(NodeRef(new Node(ZuFwd<Item_>(item))));
   }
@@ -520,7 +520,7 @@ protected:
     return iterator.m_node = node;
   }
   template <typename NodeRef_>
-  typename ZuConvertible<NodeRef_, NodeRef>::T
+  ZuConvertible<NodeRef_, NodeRef>
       pushIterate(Iterator_ &iterator, const NodeRef_ &node_) {
     const NodeRef &node = node_;
     Node *prevNode = iterator.m_node;
@@ -540,12 +540,12 @@ protected:
     ++m_count;
   }
   template <typename Item_>
-  typename ZuNotConvertible<typename ZuDeref<Item_>::T, NodeRef>::T
+  ZuNotConvertible<ZuDeref<Item_>, NodeRef>
       pushIterate(Iterator_ &iterator, Item_ &&item) {
     pushIterate(iterator, NodeRef(new Node(ZuFwd<Item_>(item))));
   }
   template <typename NodeRef_>
-  typename ZuConvertible<NodeRef, NodeRef_>::T
+  ZuConvertible<NodeRef, NodeRef_>
       unshiftIterate(Iterator_ &iterator, const NodeRef_ &node_) {
     const NodeRef &node = node_;
     Node *nextNode = iterator.m_node;
@@ -565,7 +565,7 @@ protected:
     ++m_count;
   }
   template <typename Item_>
-  typename ZuNotConvertible<typename ZuDeref<Item_>::T, NodeRef>::T
+  ZuNotConvertible<ZuDeref<Item_>, NodeRef>
       unshiftIterate(Iterator_ &iterator, Item_ &&item) {
     unshiftIterate(iterator, NodeRef(new Node(ZuFwd<Item_>(item))));
   }

@@ -69,8 +69,8 @@ struct ZuAccessor_<T, I, true> : public ZuAccessor__<T, I> {
 };
 
 template <typename T, typename I> struct ZuAccessor :
-    public ZuAccessor_<typename ZuDecay<T>::T, typename ZuDecay<I>::T,
-      ZuConversion<typename ZuDecay<I>::T, typename ZuDecay<T>::T>::Is> { };
+    public ZuAccessor_<ZuDecay<T>, ZuDecay<I>,
+      ZuConversion<ZuDecay<I>, ZuDecay<T>>::Is> { };
 
 template <typename Accessor_, bool Same> struct ZuIndex_ {
   using Accessor = Accessor_;

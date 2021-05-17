@@ -708,7 +708,7 @@ protected:
 
   static void log__(ZmStream &s) { }
   template <typename Arg0, typename ...Args>
-  static typename ZuIsNot<ZuString, Arg0>::T
+  static ZuIsNot<ZuString, Arg0>
   log__(ZmStream &s, Arg0 arg0, Args... args) {
     s << ZuMv(arg0);
     log__(s, ZuMv(args)...);

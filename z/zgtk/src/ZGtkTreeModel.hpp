@@ -784,13 +784,13 @@ namespace TreeHierarchy {
       return true;
     }
     template <typename L, unsigned Depth_ = Depth>
-    typename ZuIfT<(Depth_ > 0), bool>::T
+    ZuIfT<(Depth_ > 0), bool>
     descend(const gint *indices, unsigned n, L &&l) const {
       if (!n) { l(impl()); return true; }
       return descend_(indices, n, ZuFwd<L>(l));
     }
     template <typename L, unsigned Depth_ = Depth>
-    typename ZuIfT<Depth_ == 0, bool>::T
+    ZuIfT<Depth_ == 0, bool>
     descend(const gint *indices, unsigned n, L &&l) const {
       return descend_(indices, n, ZuFwd<L>(l));
     }
@@ -910,7 +910,7 @@ namespace TreeHierarchy {
       if (!depth) return false;
       gint *indices = gtk_tree_path_get_indices(path);
       return impl()->root()->descend(indices, depth, [iter_](auto ptr) {
-	using T = typename ZuDecay<decltype(*ptr)>::T;
+	using T = ZuDecay<decltype(*ptr)>;
 	if (!ptr) return false;
 	*Iter::template new_<T *>(iter_) = const_cast<T *>(ptr);
 	return true;
@@ -921,7 +921,7 @@ namespace TreeHierarchy {
       gint depth;
       gint indices[Depth] = { 0 };
       iter->cdispatch([&depth, indices](auto ptr) mutable {
-	using T = typename ZuDecay<decltype(*ptr)>::T;
+	using T = ZuDecay<decltype(*ptr)>;
 	depth = T::Depth;
 	if (ZuLikely(ptr)) ptr->template ascend<Impl>(indices);
       });
@@ -938,7 +938,7 @@ namespace TreeHierarchy {
       return iter->cdispatch([iter](auto ptr) {
 	if (!ptr) return false;
 	return ptr->template next<Impl>([iter](auto ptr) {
-	  using T = typename ZuDecay<decltype(*ptr)>::T;
+	  using T = ZuDecay<decltype(*ptr)>;
 	  if (!ptr) return false;
 	  *iter = const_cast<T *>(ptr);
 	  return true;
@@ -948,7 +948,7 @@ namespace TreeHierarchy {
     gboolean iter_children(GtkTreeIter *iter_, GtkTreeIter *parent_) {
       if (!parent_)
 	return impl()->root()->child(0, [iter_](auto ptr) {
-	  using T = typename ZuDecay<decltype(*ptr)>::T;
+	  using T = ZuDecay<decltype(*ptr)>;
 	  if (!ptr) return false;
 	  *Iter::template new_<T *>(iter_) = const_cast<T *>(ptr);
 	  return true;
@@ -957,7 +957,7 @@ namespace TreeHierarchy {
       return parent->cdispatch([iter_](auto ptr) {
 	if (!ptr) return false;
 	return ptr->child(0, [iter_](auto ptr) {
-	  using T = typename ZuDecay<decltype(*ptr)>::T;
+	  using T = ZuDecay<decltype(*ptr)>;
 	  if (!ptr) return false;
 	  *Iter::template new_<T *>(iter_) = const_cast<T *>(ptr);
 	  return true;
@@ -983,7 +983,7 @@ namespace TreeHierarchy {
     gboolean iter_nth_child(GtkTreeIter *iter_, GtkTreeIter *parent_, gint i) {
       if (!parent_)
 	return impl()->root()->child(i, [iter_](auto ptr) {
-	  using T = typename ZuDecay<decltype(*ptr)>::T;
+	  using T = ZuDecay<decltype(*ptr)>;
 	  if (!ptr) return false;
 	  *Iter::template new_<T *>(iter_) = const_cast<T *>(ptr);
 	  return true;
@@ -992,7 +992,7 @@ namespace TreeHierarchy {
       return parent->cdispatch([iter_, i](auto ptr) {
 	if (!ptr) return false;
 	return ptr->child(i, [iter_](auto ptr) {
-	  using T = typename ZuDecay<decltype(*ptr)>::T;
+	  using T = ZuDecay<decltype(*ptr)>;
 	  if (!ptr) return false;
 	  *Iter::template new_<T *>(iter_) = const_cast<T *>(ptr);
 	  return true;
@@ -1004,7 +1004,7 @@ namespace TreeHierarchy {
       auto child = reinterpret_cast<Iter *>(child_);
       return child->cdispatch([iter_](auto ptr) {
 	auto parent = ptr->template parent<Impl>();
-	using T = typename ZuDecay<decltype(*parent)>::T;
+	using T = ZuDecay<decltype(*parent)>;
 	if (!parent) return false;
 	*Iter::template new_<T *>(iter_) = const_cast<T *>(parent);
 	return true;

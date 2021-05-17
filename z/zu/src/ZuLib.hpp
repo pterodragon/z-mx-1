@@ -145,53 +145,56 @@
 #if defined (__cplusplus)
 // std::remove_reference without dragging in STL cruft
 template <typename T_>
-struct ZuDeref { using T = T_; };
+struct ZuDeref_ { using T = T_; };
 template <typename T_>
-struct ZuDeref<T_ &> { using T = T_; };
+struct ZuDeref_<T_ &> { using T = T_; };
 template <typename T_>
-struct ZuDeref<const T_ &> { using T = const T_; };
+struct ZuDeref_<const T_ &> { using T = const T_; };
 template <typename T_>
-struct ZuDeref<volatile T_ &> { using T = volatile T_; };
+struct ZuDeref_<volatile T_ &> { using T = volatile T_; };
 template <typename T_>
-struct ZuDeref<const volatile T_ &> { using T = const volatile T_; };
+struct ZuDeref_<const volatile T_ &> { using T = const volatile T_; };
 template <typename T_>
-struct ZuDeref<T_ &&> { using T = T_; };
+struct ZuDeref_<T_ &&> { using T = T_; };
+template <typename T>
+using ZuDeref = typename ZuDeref_<T>::T;
 
 // std::remove_cv (strip qualifiers) without dragging in STL cruft
 template <typename T_>
-struct ZuStrip { using T = T_; };
+struct ZuStrip_ { using T = T_; };
 template <typename T_>
-struct ZuStrip<const T_> { using T = T_; };
+struct ZuStrip_<const T_> { using T = T_; };
 template <typename T_>
-struct ZuStrip<volatile T_> { using T = T_; };
+struct ZuStrip_<volatile T_> { using T = T_; };
 template <typename T_>
-struct ZuStrip<const volatile T_> { using T = T_; };
+struct ZuStrip_<const volatile T_> { using T = T_; };
+template <typename T>
+using ZuStrip = typename ZuStrip_<T>::T;
 
 // std::decay without dragging in STL cruft
-template <typename T_>
-struct ZuDecay { using T = typename ZuStrip<typename ZuDeref<T_>::T>::T; };
+template <typename T> using ZuDecay = ZuStrip<ZuDeref<T>>;
 
 // shorthand constexpr std::forward without STL cruft
 template <typename T>
-constexpr T &&ZuFwd(typename ZuDeref<T>::T &v) noexcept { // fwd lvalue
+constexpr T &&ZuFwd(ZuDeref<T> &v) noexcept { // fwd lvalue
   return static_cast<T &&>(v);
 }
 template <typename T>
-constexpr T &&ZuFwd(typename ZuDeref<T>::T &&v) noexcept { // fwd rvalue
+constexpr T &&ZuFwd(ZuDeref<T> &&v) noexcept { // fwd rvalue
   return static_cast<T &&>(v);
 }
 // use to forward auto &&x parameters (usually template lambda parameters)
 #define ZuAutoFwd(x) ZuFwd<decltype(x)>(x)
 // shorthand constexpr std::move without STL cruft
 template <typename T>
-constexpr typename ZuDeref<T>::T &&ZuMv(T &&t) noexcept {
-  return static_cast<typename ZuDeref<T>::T &&>(t);
+constexpr ZuDeref<T> &&ZuMv(T &&t) noexcept {
+  return static_cast<ZuDeref<T> &&>(t);
 }
 
 // generic RAII guard
 template <typename L> struct ZuGuard {
-  ZuInline ZuGuard(L fn_) : fn(ZuMv(fn_)) { }
-  ZuInline ~ZuGuard() { fn(); }
+  ZuGuard(L fn_) : fn(ZuMv(fn_)) { }
+  ~ZuGuard() { fn(); }
   ZuGuard(const ZuGuard &) = delete;
   ZuGuard &operator =(const ZuGuard &) = delete;
   ZuGuard(ZuGuard &&) = default;
@@ -222,7 +225,7 @@ template <typename L> struct ZuGuard {
 // move/copy universal reference
 // ZuMvCp<U>::mvcp(ZuFwd<U>(u), [](auto &&v) { }, [](const auto &v) { });
 template <typename T_> struct ZuMvCp {
-  using T = typename ZuDecay<T_>::T;
+  using T = ZuDecay<T_>;
 
   template <typename Mv, typename Cp>
   static auto mvcp(const T &v, Mv, Cp cp_) { return cp_(v); }
@@ -243,35 +246,41 @@ template <typename T_> struct ZuMvCp {
 // type list
 template <typename ...Args> struct ZuTypeList {
   enum { N = sizeof...(Args) };
-  template <typename ...Args_> struct Prepend {
+  template <typename ...Args_> struct Prepend_ {
     using T = ZuTypeList<Args_..., Args...>;
   };
-  template <typename ...Args_> struct Prepend<ZuTypeList<Args_...>> {
+  template <typename ...Args_> struct Prepend_<ZuTypeList<Args_...>> {
     using T = ZuTypeList<Args_..., Args...>;
   };
-  template <typename ...Args_> struct Append {
+  template <typename ...Args_>
+  using Prepend = typename Prepend_<Args_...>::T;
+  template <typename ...Args_> struct Append_ {
     using T = ZuTypeList<Args..., Args_...>;
   };
-  template <typename ...Args_> struct Append<ZuTypeList<Args_...>> {
+  template <typename ...Args_> struct Append_<ZuTypeList<Args_...>> {
     using T = ZuTypeList<Args..., Args_...>;
   };
+  template <typename ...Args_>
+  using Append = typename Append_<Args_...>::T;
 };
 
 // index -> type
-template <unsigned, typename ...> struct ZuType;
+template <unsigned, typename ...> struct ZuType_;
 template <unsigned I, typename T0, typename ...Args>
-struct ZuType_ {
-  using T = typename ZuType<I - 1, Args...>::T;
+struct ZuType__ {
+  using T = typename ZuType_<I - 1, Args...>::T;
 };
 template <typename T0, typename ...Args>
-struct ZuType_<0, T0, Args...> {
+struct ZuType__<0, T0, Args...> {
   using T = T0;
 };
 template <unsigned I, typename ...Args>
-struct ZuType : public ZuType_<I, Args...> { };
+struct ZuType_ : public ZuType__<I, Args...> { };
 template <unsigned I, typename ...Args>
-struct ZuType<I, ZuTypeList<Args...>> :
-  public ZuType<I, Args...> { };
+struct ZuType_<I, ZuTypeList<Args...>> :
+  public ZuType_<I, Args...> { };
+template <unsigned I, typename ...Args>
+using ZuType = typename ZuType_<I, Args...>::T;
 
 // type -> index
 template <typename, typename ...> struct ZuTypeIndex;
@@ -288,179 +297,197 @@ struct ZuTypeIndex<T, ZuTypeList<Args...>> :
   public ZuTypeIndex<T, Args...> { };
 
 // map
-template <template <typename> class, typename ...> struct ZuTypeMap;
+template <template <typename> class, typename ...> struct ZuTypeMap_;
 template <template <typename> class Map, typename T0>
-struct ZuTypeMap<Map, T0> {
-  using T = ZuTypeList<typename Map<T0>::T>;
+struct ZuTypeMap_<Map, T0> {
+  using T = ZuTypeList<Map<T0>>;
 };
 template <template <typename> class Map, typename T0, typename ...Args>
-struct ZuTypeMap<Map, T0, Args...> {
+struct ZuTypeMap_<Map, T0, Args...> {
   using T =
-    typename ZuTypeList<typename Map<T0>::T>::template Append<
-      typename ZuTypeMap<Map, Args...>::T>::T;
+    typename ZuTypeList<Map<T0>>::template Append<
+      typename ZuTypeMap_<Map, Args...>::T>;
 };
 template <template <typename> class Map, typename ...Args>
-struct ZuTypeMap<Map, ZuTypeList<Args...>> :
-  public ZuTypeMap<Map, Args...> { };
+struct ZuTypeMap_<Map, ZuTypeList<Args...>> :
+  public ZuTypeMap_<Map, Args...> { };
+template <template <typename> class Map, typename ...Args>
+using ZuTypeMap = typename ZuTypeMap_<Map, Args...>::T;
 
 // grep
-template <typename, bool> struct ZuTypeGrep_;
-template <typename T0> struct ZuTypeGrep_<T0, true> {
+template <typename, bool> struct ZuTypeGrep__;
+template <typename T0> struct ZuTypeGrep__<T0, true> {
   using T = ZuTypeList<T0>;
 };
-template <typename T0> struct ZuTypeGrep_<T0, false> {
+template <typename T0> struct ZuTypeGrep__<T0, false> {
   using T = ZuTypeList<>;
 };
 template <template <typename> class, typename ...>
-struct ZuTypeGrep {
+struct ZuTypeGrep_ {
   using T = ZuTypeList<>;
 };
 template <template <typename> class Filter, typename T0>
-struct ZuTypeGrep<Filter, T0> {
-  using T = typename ZuTypeGrep_<T0, Filter<T0>::OK>::T;
+struct ZuTypeGrep_<Filter, T0> {
+  using T = typename ZuTypeGrep__<T0, Filter<T0>::OK>::T;
 };
 template <template <typename> class Filter, typename T0, typename ...Args>
-struct ZuTypeGrep<Filter, T0, Args...> {
+struct ZuTypeGrep_<Filter, T0, Args...> {
   using T =
-    typename ZuTypeGrep_<T0, Filter<T0>::OK>::T::template Append<
-      typename ZuTypeGrep<Filter, Args...>::T>::T;
+    typename ZuTypeGrep__<T0, Filter<T0>::OK>::T::template Append<
+      typename ZuTypeGrep_<Filter, Args...>::T>;
 };
 template <template <typename> class Filter, typename ...Args>
-struct ZuTypeGrep<Filter, ZuTypeList<Args...>> :
-  public ZuTypeGrep<Filter, Args...> { };
+struct ZuTypeGrep_<Filter, ZuTypeList<Args...>> :
+  public ZuTypeGrep_<Filter, Args...> { };
+template <template <typename> class Filter, typename ...Args>
+using ZuTypeGrep = typename ZuTypeGrep_<Filter, Args...>::T;
 
 // reduce (recursive pair-wise reduction)
 template <template <typename...> class, typename ...>
-struct ZuTypeReduce;
+struct ZuTypeReduce_;
 template <template <typename...> class Reduce, typename T0>
-struct ZuTypeReduce<Reduce, T0> {
+struct ZuTypeReduce_<Reduce, T0> {
   using T = typename Reduce<T0>::T;
 };
 template <template <typename...> class Reduce, typename T0, typename T1>
-struct ZuTypeReduce<Reduce, T0, T1> {
+struct ZuTypeReduce_<Reduce, T0, T1> {
   using T = typename Reduce<T0, T1>::T;
 };
 template <
   template <typename...> class Reduce,
   typename T0, typename T1, typename ...Args>
-struct ZuTypeReduce<Reduce, T0, T1, Args...> {
+struct ZuTypeReduce_<Reduce, T0, T1, Args...> {
   using T =
-    typename Reduce<T0, typename ZuTypeReduce<Reduce, T1, Args...>::T>::T;
+    typename Reduce<T0, typename ZuTypeReduce_<Reduce, T1, Args...>::T>::T;
 };
 template <template <typename...> class Reduce, typename ...Args>
-struct ZuTypeReduce<Reduce, ZuTypeList<Args...>> :
-  public ZuTypeReduce<Reduce, Args...> { };
+struct ZuTypeReduce_<Reduce, ZuTypeList<Args...>> :
+    public ZuTypeReduce_<Reduce, Args...> { };
+template <template <typename...> class Reduce, typename ...Args>
+using ZuTypeReduce = typename ZuTypeReduce_<Reduce, Args...>::T;
 
 // split typelist left, 0..N-1
-template <unsigned N, typename ...Args> struct ZuTypeLeft;
+template <unsigned N, typename ...Args> struct ZuTypeLeft_;
 template <unsigned N, typename Arg0, typename ...Args>
-struct ZuTypeLeft<N, Arg0, Args...> {
-  using T = typename ZuTypeLeft<N - 1, Args...>::T::template Prepend<Arg0>::T;
+struct ZuTypeLeft_<N, Arg0, Args...> {
+  using T = typename ZuTypeLeft_<N - 1, Args...>::T::template Prepend<Arg0>;
 };
 template <typename Arg0, typename ...Args>
-struct ZuTypeLeft<0, Arg0, Args...> {
+struct ZuTypeLeft_<0, Arg0, Args...> {
   using T = ZuTypeList<>;
 };
 template <typename ...Args>
-struct ZuTypeLeft<0, Args...> {
+struct ZuTypeLeft_<0, Args...> {
   using T = ZuTypeList<>;
 };
 template <unsigned N, typename ...Args>
-struct ZuTypeLeft<N, ZuTypeList<Args...>> : public ZuTypeLeft<N, Args...> { };
+struct ZuTypeLeft_<N, ZuTypeList<Args...>> :
+    public ZuTypeLeft_<N, Args...> { };
+template <unsigned N, typename ...Args>
+using ZuTypeLeft = typename ZuTypeLeft_<N, Args...>::T;
 
 // split typelist right, N..
-template <unsigned N, typename ...Args> struct ZuTypeRight;
+template <unsigned N, typename ...Args> struct ZuTypeRight_;
 template <unsigned N, typename Arg0, typename ...Args>
-struct ZuTypeRight<N, Arg0, Args...> {
-  using T = typename ZuTypeRight<N - 1, Args...>::T;
+struct ZuTypeRight_<N, Arg0, Args...> {
+  using T = typename ZuTypeRight_<N - 1, Args...>::T;
 };
 template <typename Arg0, typename ...Args>
-struct ZuTypeRight<0, Arg0, Args...> {
+struct ZuTypeRight_<0, Arg0, Args...> {
   using T = ZuTypeList<Arg0, Args...>;
 };
 template <typename ...Args>
-struct ZuTypeRight<0, Args...> {
+struct ZuTypeRight_<0, Args...> {
   using T = ZuTypeList<Args...>;
 };
 template <unsigned N, typename ...Args>
-struct ZuTypeRight<N, ZuTypeList<Args...>> : public ZuTypeRight<N, Args...> { };
+struct ZuTypeRight_<N, ZuTypeList<Args...>> :
+    public ZuTypeRight_<N, Args...> { };
+template <unsigned N, typename ...Args>
+using ZuTypeRight = typename ZuTypeRight_<N, Args...>::T;
 
 // compile-time merge sort typelist using Index<T>::I
 template <template <typename> class Index, typename Left, typename Right>
-struct ZuTypeMerge;
-template <template <typename> class, typename, typename, bool>
 struct ZuTypeMerge_;
+template <template <typename> class, typename, typename, bool>
+struct ZuTypeMerge__;
 template <
   template <typename> class Index,
   typename LeftArg0, typename ...LeftArgs,
   typename RightArg0, typename ...RightArgs>
-struct ZuTypeMerge_<Index,
+struct ZuTypeMerge__<Index,
     ZuTypeList<LeftArg0, LeftArgs...>,
     ZuTypeList<RightArg0, RightArgs...>, false> {
-  using T = typename ZuTypeMerge<Index,
+  using T = typename ZuTypeMerge_<Index,
     ZuTypeList<LeftArgs...>,
-    ZuTypeList<RightArg0, RightArgs...>>::T::template Prepend<LeftArg0>::T;
+    ZuTypeList<RightArg0, RightArgs...>>::T::template Prepend<LeftArg0>;
+};
+template <
+  template <typename> class Index,
+  typename LeftArg0, typename ...LeftArgs,
+  typename RightArg0, typename ...RightArgs>
+struct ZuTypeMerge__<Index,
+    ZuTypeList<LeftArg0, LeftArgs...>,
+    ZuTypeList<RightArg0, RightArgs...>, true> {
+  using T = typename ZuTypeMerge_<Index,
+    ZuTypeList<LeftArg0, LeftArgs...>,
+    ZuTypeList<RightArgs...>>::T::template Prepend<RightArg0>;
 };
 template <
   template <typename> class Index,
   typename LeftArg0, typename ...LeftArgs,
   typename RightArg0, typename ...RightArgs>
 struct ZuTypeMerge_<Index,
-    ZuTypeList<LeftArg0, LeftArgs...>,
-    ZuTypeList<RightArg0, RightArgs...>, true> {
-  using T = typename ZuTypeMerge<Index,
-    ZuTypeList<LeftArg0, LeftArgs...>,
-    ZuTypeList<RightArgs...>>::T::template Prepend<RightArg0>::T;
-};
-template <
-  template <typename> class Index,
-  typename LeftArg0, typename ...LeftArgs,
-  typename RightArg0, typename ...RightArgs>
-struct ZuTypeMerge<Index,
   ZuTypeList<LeftArg0, LeftArgs...>,
   ZuTypeList<RightArg0, RightArgs...>> :
-    public ZuTypeMerge_<Index, 
+    public ZuTypeMerge__<Index, 
       ZuTypeList<LeftArg0, LeftArgs...>,
       ZuTypeList<RightArg0, RightArgs...>,
       (Index<LeftArg0>::I > Index<RightArg0>::I)> { };
 template <template <typename> class Index, typename ...Args>
-struct ZuTypeMerge<Index, ZuTypeList<>, ZuTypeList<Args...>> {
+struct ZuTypeMerge_<Index, ZuTypeList<>, ZuTypeList<Args...>> {
   using T = ZuTypeList<Args...>;
 };
 template <template <typename> class Index, typename ...Args>
-struct ZuTypeMerge<Index, ZuTypeList<Args...>, ZuTypeList<>> {
+struct ZuTypeMerge_<Index, ZuTypeList<Args...>, ZuTypeList<>> {
   using T = ZuTypeList<Args...>;
 };
 template <template <typename> class Index>
-struct ZuTypeMerge<Index, ZuTypeList<>, ZuTypeList<>> {
+struct ZuTypeMerge_<Index, ZuTypeList<>, ZuTypeList<>> {
   using T = ZuTypeList<>;
 };
+template <template <typename> class Index, typename Left, typename Right>
+using ZuTypeMerge = typename ZuTypeMerge_<Index, Left, Right>::T;
 template <template <typename> class Index, typename ...Args>
-struct ZuTypeSort {
+struct ZuTypeSort_ {
   enum { N = sizeof...(Args) };
-  using T = typename ZuTypeMerge<Index,
-    typename ZuTypeSort<Index, typename ZuTypeLeft<(N>>1), Args...>::T>::T,
-    typename ZuTypeSort<Index, typename ZuTypeRight<(N>>1), Args...>::T>::T
-  >::T;
+  using T = ZuTypeMerge<Index,
+    typename ZuTypeSort_<Index, ZuTypeLeft<(N>>1), Args...>>::T,
+    typename ZuTypeSort_<Index, ZuTypeRight<(N>>1), Args...>>::T
+  >;
 };
 template <template <typename> class Index, typename Arg0>
-struct ZuTypeSort<Index, Arg0> {
+struct ZuTypeSort_<Index, Arg0> {
   using T = ZuTypeList<Arg0>;
 };
 template <template <typename> class Index>
-struct ZuTypeSort<Index> {
+struct ZuTypeSort_<Index> {
   using T = ZuTypeList<>;
 };
 template <template <typename> class Index, typename ...Args>
-struct ZuTypeSort<Index, ZuTypeList<Args...>> :
-    public ZuTypeSort<Index, Args...> { };
+struct ZuTypeSort_<Index, ZuTypeList<Args...>> :
+    public ZuTypeSort_<Index, Args...> { };
+template <template <typename> class Index, typename ...Args>
+using ZuTypeSort = typename ZuTypeSort_<Index, Args...>::T;
 
 // apply typelist to template
 template <template <typename...> class Type, typename ...Args>
-struct ZuTypeApply { using T = Type<Args...>; };
+struct ZuTypeApply_ { using T = Type<Args...>; };
 template <template <typename...> class Type, typename ...Args>
-struct ZuTypeApply<Type, ZuTypeList<Args...>> :
-  public ZuTypeApply<Type, Args...> { };
+struct ZuTypeApply_<Type, ZuTypeList<Args...>> :
+  public ZuTypeApply_<Type, Args...> { };
+template <template <typename...> class Type, typename ...Args>
+using ZuTypeApply = typename ZuTypeApply_<Type, Args...>::T;
 
 // invoke lambda on all elements of typelist []<typename T>() { ...; }
 template <typename ...>
@@ -503,22 +530,31 @@ template <typename T> auto ZuDeclVal_(...) -> typename ZuDeclVal__<T>::T;
 template <typename U> decltype(ZuDeclVal_<U>(0)) ZuDeclVal();
  
 // shorthand for std::void_t
-template <typename ...> struct ZuVoid { using T = void; };
+template <typename ...> struct ZuVoid_ { using T = void; };
+template <typename ...Args> using ZuVoid = typename ZuVoid_<Args...>::T;
 
 // cv checking
-template <typename U, typename R = void> struct ZuIsConst;
+template <typename U, typename R = void> struct ZuIsConst_;
 template <typename U, typename R>
-struct ZuIsConst<const U, R> { using T = R; };
+struct ZuIsConst_<const U, R> { using T = R; };
 template <typename U, typename R = void>
-struct ZuNotConst { using T = R; };
-template <typename U, typename R> struct ZuNotConst<const U, R> { };
+using ZuIsConst = typename ZuIsConst_<U, R>::T;
+template <typename U, typename R = void>
+struct ZuNotConst_ { using T = R; };
+template <typename U, typename R> struct ZuNotConst_<const U, R> { };
+template <typename U, typename R = void>
+using ZuNotConst = typename ZuNotConst_<U, R>::T;
 
-template <typename U, typename R = void> struct ZuIsVolatile;
+template <typename U, typename R = void> struct ZuIsVolatile_;
 template <typename U, typename R>
-struct ZuIsVolatile<volatile U, R> { using T = R; };
+struct ZuIsVolatile_<volatile U, R> { using T = R; };
 template <typename U, typename R = void>
-struct ZuNotVolatile { using T = R; };
-template <typename U, typename R> struct ZuNotVolatile<volatile U, R> { };
+using ZuIsVolatile = typename ZuIsVolatile_<U, R>::T;
+template <typename U, typename R = void>
+struct ZuNotVolatile_ { using T = R; };
+template <typename U, typename R> struct ZuNotVolatile_<volatile U, R> { };
+template <typename U, typename R = void>
+using ZuNotVolatile = typename ZuNotVolatile_<U, R>::T;
 
 // T *var = ZuAlloca(var, n);
 #ifdef _MSC_VER

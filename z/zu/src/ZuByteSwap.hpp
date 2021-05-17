@@ -176,38 +176,38 @@ public:
 
 private:
   template <typename T>
-  typename ZuIs<T, ZuByteSwap>::T set(const T &i) {
+  ZuIs<T, ZuByteSwap> set(const T &i) {
     m_i = i.m_i;
   }
   template <typename T>
-  typename ZuIfT<
+  ZuIfT<
       !ZuConversion<T, ZuByteSwap>::Is &&
-      ZuConversion<T, I>::Exists>::T set(const T &i) {
+      ZuConversion<T, I>::Exists> set(const T &i) {
     m_i = B::bswap((I)i);
   }
   template <typename T>
-  typename ZuIfT<
+  ZuIfT<
       !ZuConversion<T, ZuByteSwap>::Is &&
       !ZuConversion<T, I>::Exists &&
-      sizeof(T) == sizeof(I)>::T set(const T &i) {
+      sizeof(T) == sizeof(I)> set(const T &i) {
     const I *ZuMayAlias(i_) = reinterpret_cast<const I *>(&i);
     m_i = B::bswap(*i_);
   }
   template <typename T>
-  typename ZuIs<T, ZuByteSwap, T>::T get() const {
+  ZuIs<T, ZuByteSwap, T> get() const {
     return *this;
   }
   template <typename T>
-  typename ZuIfT<
+  ZuIfT<
       !ZuConversion<T, ZuByteSwap>::Is &&
-      ZuConversion<T, I>::Exists, T>::T get() const {
+      ZuConversion<T, I>::Exists, T> get() const {
     return static_cast<T>(B::bswap(m_i));
   }
   template <typename T>
-  typename ZuIfT<
+  ZuIfT<
       !ZuConversion<T, ZuByteSwap>::Is &&
       !ZuConversion<T, I>::Exists &&
-      sizeof(T) == sizeof(I), T>::T get() const {
+      sizeof(T) == sizeof(I), T> get() const {
     I i = B::bswap(m_i);
     T *ZuMayAlias(i_) = reinterpret_cast<T *>(&i);
     return *i_;

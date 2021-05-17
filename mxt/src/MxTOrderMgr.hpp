@@ -47,12 +47,12 @@ struct AppTypes : public MxTAppTypes<AppTypes> {
 
     // update
     template <typename Update>
-    typename ZuIs<NewOrder, Update>::T update(const Update &u) {
+    ZuIs<NewOrder, Update> update(const Update &u) {
       Base::update(u);
       clOrdID.update(u.clOrdID);
     }
     template <typename Update>
-    typename ZuIsNot<NewOrder, Update>::T update(const Update &u) {
+    ZuIsNot<NewOrder, Update> update(const Update &u) {
       Base::update(u);
     }
 
@@ -116,7 +116,7 @@ public:
 
   // emits ack message (Ordered/Modified/Canceled)
   template <typename Out>
-  typename ZuIsBase<Txn_, Out, bool>::T ack(Order *order, Out &out) {
+  ZuIsBase<Txn_, Out, bool> ack(Order *order, Out &out) {
     auto &newOrder = order->newOrder();
     auto &modify = order->modify();
     auto &cancel = order->cancel();
@@ -307,7 +307,7 @@ public:
   }
 
   template <typename In>
-  typename ZuIsBase<Txn_, In, uintptr_t>::T
+  ZuIsBase<Txn_, In, uintptr_t>
   newOrder(Order *order, In &in) {
     order->orderTxn = in.template data<NewOrder>();
     newOrderIn_<MxTEventState::Queued>(order);
@@ -332,7 +332,7 @@ private:
 
 public:
   template <typename In>
-  typename ZuIsBase<Txn_, In, uintptr_t>::T
+  ZuIsBase<Txn_, In, uintptr_t>
   ordered(Order *order, In &in) {
     auto &newOrder = order->newOrder();
     auto &modify = order->modify();
@@ -391,7 +391,7 @@ private:
 
 public:
   template <typename In>
-  typename ZuIsBase<Txn_, In, uintptr_t>::T
+  ZuIsBase<Txn_, In, uintptr_t>
   reject(Order *order, In &in) {
     auto &newOrder = order->newOrder();
     auto &modify = order->modify();
@@ -478,7 +478,7 @@ public:
   }
 
   template <typename In>
-  typename ZuIsBase<Txn_, In, uintptr_t>::T
+  ZuIsBase<Txn_, In, uintptr_t>
   modify(Order *order, In &in) {
     auto &newOrder = order->newOrder();
     auto &modify = order->modify();
@@ -561,7 +561,7 @@ public:
   }
 
   template <typename In>
-  typename ZuIsBase<Txn_, In, uintptr_t>::T
+  ZuIsBase<Txn_, In, uintptr_t>
   modSimulated(Order *order, In &in) {
     auto &newOrder = order->newOrder();
     auto &modify = order->modify();
@@ -677,7 +677,7 @@ private:
 
 public:
   template <typename In>
-  typename ZuIsBase<Txn_, In, uintptr_t>::T
+  ZuIsBase<Txn_, In, uintptr_t>
   modified(Order *order, In &in) {
     auto &newOrder = order->newOrder();
     auto &modify = order->modify();
@@ -743,7 +743,7 @@ public:
   }
 
   template <typename In>
-  typename ZuIsBase<Txn_, In, uintptr_t>::T
+  ZuIsBase<Txn_, In, uintptr_t>
   modReject(Order *order, In &in) {
     auto &newOrder = order->newOrder();
     auto &modify = order->modify();
@@ -775,7 +775,7 @@ public:
   }
 
   template <typename In>
-  typename ZuIsBase<Txn_, In, uintptr_t>::T
+  ZuIsBase<Txn_, In, uintptr_t>
   modRejectCxl(Order *order, In &in) {
     auto &newOrder = order->newOrder();
     auto &modify = order->modify();
@@ -835,7 +835,7 @@ public:
   }
 
   template <typename In>
-  typename ZuIsBase<Txn_, In, uintptr_t>::T
+  ZuIsBase<Txn_, In, uintptr_t>
   cancel(Order *order, In &in) {
     auto &newOrder = order->newOrder();
     auto &modify = order->modify();
@@ -929,7 +929,7 @@ private:
 
 public:
   template <typename In>
-  typename ZuIsBase<Txn_, In, uintptr_t>::T
+  ZuIsBase<Txn_, In, uintptr_t>
   canceled(Order *order, In &in) {
     auto &newOrder = order->newOrder();
     auto &modify = order->modify();
@@ -1016,7 +1016,7 @@ public:
   }
 
   template <typename In>
-  typename ZuIsBase<Txn_, In, uintptr_t>::T
+  ZuIsBase<Txn_, In, uintptr_t>
   cxlReject(Order *order, In &in) {
     auto &newOrder = order->newOrder();
     // auto &modify = order->modify();
@@ -1060,7 +1060,7 @@ private:
 public:
   // apply fill to order
   template <typename In>
-  typename ZuIsBase<Txn_, In, uintptr_t>::T
+  ZuIsBase<Txn_, In, uintptr_t>
   fill(Order *order, In &in) {
     auto &newOrder = order->newOrder();
     auto &modify = order->modify();
@@ -1174,7 +1174,7 @@ applyFill:
 
   // closes the order
   template <typename In>
-  typename ZuIsBase<Txn_, In, uintptr_t>::T
+  ZuIsBase<Txn_, In, uintptr_t>
   closed(Order *order, In &in) {
     auto &newOrder = order->newOrder();
     order->execTxn = in.template data<Closed>();

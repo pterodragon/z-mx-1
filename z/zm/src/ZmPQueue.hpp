@@ -207,7 +207,7 @@ public:
       public ZuIf<NullObject, Object,
 	ZuConversion<ZuNull, Object>::Is ||
 	ZuConversion<ZuShadow, Object>::Is ||
-	(NodeIsItem && ZuConversion<Object, Item>::Is)>::T,
+	(NodeIsItem && ZuConversion<Object, Item>::Is)>,
       public Heap {
     NodeFn_(const NodeFn_ &);
     NodeFn_ &operator =(const NodeFn_ &); // prevent mis-use
@@ -834,7 +834,7 @@ private:
     return nullptr;
   }
   template <bool Dequeue>
-  typename ZuIfT<Dequeue, NodeRef>::T enqueue__(NodeRef node,
+  ZuIfT<Dequeue, NodeRef> enqueue__(NodeRef node,
       Key end, unsigned, unsigned bytes, unsigned) {
     m_headKey = end;
     if (end > m_tailKey) m_tailKey = end;
@@ -845,7 +845,7 @@ private:
     return node;
   }
   template <bool Dequeue>
-  typename ZuIfT<!Dequeue, NodeRef>::T enqueue__(NodeRef node,
+  ZuIfT<!Dequeue, NodeRef> enqueue__(NodeRef node,
       Key end, unsigned length, unsigned bytes, unsigned addSeqNo) {
     Node *ptr;
     new (&ptr) NodeRef(ZuMv(node));

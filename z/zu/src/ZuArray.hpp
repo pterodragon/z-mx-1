@@ -113,41 +113,31 @@ private:
       ZuEquivChar<typename ZuTraits<U>::Elem, V>::Same };
   };
   template <typename U, typename V = T> struct IsPtr {
-    using W = typename ZuNormChar<U>::T;
-    using X = typename ZuNormChar<V>::T;
+    using W = ZuNormChar<U>;
+    using X = ZuNormChar<V>;
     enum { OK = ZuConversion<W *, X *>::Exists };
   };
 
-  template <typename U, typename R = void, bool OK = IsStrLiteral<U>::OK>
-  struct MatchStrLiteral;
-  template <typename U, typename R>
-  struct MatchStrLiteral<U, R, 1> { using T = R; };
-  template <typename U, typename R = void, bool OK = IsPrimitiveArray<U>::OK>
-  struct MatchPrimitiveArray;
-  template <typename U, typename R>
-  struct MatchPrimitiveArray<U, R, 1> { using T = R; };
-  template <typename U, typename R = void, bool OK = IsCString<U>::OK>
-  struct MatchCString;
-  template <typename U, typename R>
-  struct MatchCString<U, R, 1> { using T = R; };
-  template <typename U, typename R = void, bool OK = IsOtherArray<U>::OK>
-  struct MatchOtherArray;
-  template <typename U, typename R>
-  struct MatchOtherArray<U, R, 1> { using T = R; };
-  template <typename U, typename R = void, bool OK = IsPtr<U>::OK>
-  struct MatchPtr;
-  template <typename U, typename R>
-  struct MatchPtr<U, R, 1> { using T = R; };
+  template <typename U, typename R = void>
+  using MatchStrLiteral = ZuIfT<IsStrLiteral<U>::OK, R>; 
+  template <typename U, typename R = void>
+  using MatchPrimitiveArray = ZuIfT<IsPrimitiveArray<U>::OK, R>; 
+  template <typename U, typename R = void>
+  using MatchCString = ZuIfT<IsCString<U>::OK, R>; 
+  template <typename U, typename R = void>
+  using MatchOtherArray = ZuIfT<IsOtherArray<U>::OK, R>; 
+  template <typename U, typename R = void>
+  using MatchPtr = ZuIfT<IsPtr<U>::OK, R>; 
 
 public:
   // compile-time length from string literal (null-terminated)
   template <typename A>
-  ZuInline ZuArray(const A &a, typename MatchStrLiteral<A>::T *_ = 0) :
+  ZuArray(const A &a, MatchStrLiteral<A> *_ = 0) :
     m_data(&a[0]),
     m_length((ZuUnlikely(!(sizeof(a) / sizeof(a[0])) || !a[0])) ? 0U :
       (sizeof(a) / sizeof(a[0])) - 1U) { }
   template <typename A>
-  ZuInline typename MatchStrLiteral<A, ZuArray &>::T operator =(A &&a) {
+  MatchStrLiteral<A, ZuArray &> operator =(A &&a) {
     m_data = &a[0];
     m_length = (ZuUnlikely(!(sizeof(a) / sizeof(a[0])) || !a[0])) ? 0U :
       (sizeof(a) / sizeof(a[0])) - 1U;
@@ -156,11 +146,11 @@ public:
 
   // compile-time length from primitive array
   template <typename A>
-  ZuInline ZuArray(const A &a, typename MatchPrimitiveArray<A>::T *_ = 0) :
+  ZuArray(const A &a, MatchPrimitiveArray<A> *_ = 0) :
     m_data(&a[0]),
     m_length(sizeof(a) / sizeof(a[0])) { }
   template <typename A>
-  ZuInline typename MatchPrimitiveArray<A, ZuArray &>::T operator =(A &&a) {
+  MatchPrimitiveArray<A, ZuArray &> operator =(A &&a) {
     m_data = &a[0];
     m_length = sizeof(a) / sizeof(a[0]);
     return *this;
@@ -168,10 +158,10 @@ public:
 
   // length from deferred strlen
   template <typename A>
-  ZuInline ZuArray(const A &a, typename MatchCString<A>::T *_ = 0) :
+  ZuArray(const A &a, MatchCString<A> *_ = 0) :
 	m_data(reinterpret_cast<T *>(a)), m_length(!a ? 0 : -1) { }
   template <typename A>
-  ZuInline typename MatchCString<A, ZuArray &>::T operator =(A &&a) {
+  MatchCString<A, ZuArray &> operator =(A &&a) {
     m_data = a;
     m_length = !a ? 0 : -1;
     return *this;
@@ -179,11 +169,11 @@ public:
 
   // length from passed type
   template <typename A>
-  ZuInline ZuArray(A &&a, typename MatchOtherArray<A>::T *_ = 0) :
+  ZuArray(A &&a, MatchOtherArray<A> *_ = 0) :
       m_data{reinterpret_cast<T *>(ZuTraits<A>::data(a))},
       m_length{!m_data ? 0 : (int)ZuTraits<A>::length(a)} { }
   template <typename A>
-  ZuInline typename MatchOtherArray<A, ZuArray &>::T operator =(A &&a) {
+  MatchOtherArray<A, ZuArray &> operator =(A &&a) {
     m_data = reinterpret_cast<T *>(ZuTraits<A>::data(a));
     m_length = !m_data ? 0 : (int)ZuTraits<A>::length(a);
     return *this;
@@ -195,23 +185,23 @@ public:
 #pragma GCC diagnostic ignored "-Wnarrowing"
 #endif
   template <typename V>
-  ZuInline ZuArray(V *data, unsigned length, typename MatchPtr<V>::T *_ = 0) :
+  ZuArray(V *data, unsigned length, MatchPtr<V> *_ = 0) :
       m_data{reinterpret_cast<T *>(data)}, m_length{length} { }
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
 
-  ZuInline const T *data() const { return m_data; }
-  ZuInline T *data() { return m_data; }
+  const T *data() const { return m_data; }
+  T *data() { return m_data; }
 
-  ZuInline unsigned length() const { return length_(); }
+  unsigned length() const { return length_(); }
 
 private:
   template <typename V = T>
-  ZuInline typename ZuIfT<
+  ZuIfT<
       ZuEquivChar<V, char>::Same ||
-      ZuEquivChar<V, wchar_t>::Same, unsigned>::T length_() const {
-    using Char = typename ZuNormChar<V>::T;
+      ZuEquivChar<V, wchar_t>::Same, unsigned> length_() const {
+    using Char = ZuNormChar<V>;
     if (ZuUnlikely(m_length < 0))
       return const_cast<ZuArray *>(this)->m_length =
 	ZuTraits<const Char *>::length(
@@ -219,34 +209,34 @@ private:
     return m_length;
   }
   template <typename V = T>
-  ZuInline typename ZuIfT<
+  ZuIfT<
     !ZuEquivChar<V, char>::Same &&
-    !ZuEquivChar<V, wchar_t>::Same, unsigned>::T length_() const {
+    !ZuEquivChar<V, wchar_t>::Same, unsigned> length_() const {
     return m_length;
   }
 
 public:
-  ZuInline const T &operator [](int i) const { return m_data[i]; }
-  ZuInline T &operator [](int i) { return m_data[i]; }
+  const T &operator [](int i) const { return m_data[i]; }
+  T &operator [](int i) { return m_data[i]; }
 
-  ZuInline const T *begin() const { return m_data; }
-  ZuInline const T *end() const { return m_data + length(); }
-  ZuInline const T *cbegin() const { return m_data; } // sigh
-  ZuInline const T *cend() const { return m_data + length(); }
-  ZuInline T *begin() { return m_data; }
-  ZuInline T *end() { return m_data + length(); }
+  const T *begin() const { return m_data; }
+  const T *end() const { return m_data + length(); }
+  const T *cbegin() const { return m_data; } // sigh
+  const T *cend() const { return m_data + length(); }
+  T *begin() { return m_data; }
+  T *end() { return m_data + length(); }
 
   // operator T *() must return nullptr if the string is empty, oherwise
   // these use cases stop working:
   // if (ZuString s = "") { } else { puts("ok"); }
   // if (ZuString s = 0) { } else { puts("ok"); }
-  ZuInline operator T *() const {
+  operator T *() const {
     return !length() ? (const T *)nullptr : m_data;
   }
 
-  ZuInline bool operator !() const { return !length(); }
+  bool operator !() const { return !length(); }
 
-  ZuInline void offset(unsigned n) {
+  void offset(unsigned n) {
     if (ZuUnlikely(!n)) return;
     if (ZuLikely(n < length()))
       m_data += n, m_length -= n;
@@ -254,7 +244,7 @@ public:
       m_data = nullptr, m_length = 0;
   }
 
-  ZuInline void trunc(unsigned n) {
+  void trunc(unsigned n) {
     if (ZuLikely(n < length())) {
       if (ZuLikely(n))
 	m_length = n;
@@ -264,11 +254,11 @@ public:
   }
 
 protected:
-  ZuInline bool same(const ZuArray &v) const { return this == &v; }
-  template <typename V> ZuInline bool same(const V &v) const { return false; }
+  bool same(const ZuArray &v) const { return this == &v; }
+  template <typename V> bool same(const V &v) const { return false; }
 
 public:
-  template <typename V> ZuInline int cmp(const V &v_) const {
+  template <typename V> int cmp(const V &v_) const {
     if (same(v_)) return 0;
     ZuArray v{v_};
     int l = length();
@@ -276,7 +266,7 @@ public:
     if (int i = Ops::cmp(data(), v.data(), l > n ? n : l)) return i;
     return l - n;
   }
-  template <typename V> ZuInline bool less(const V &v_) const {
+  template <typename V> bool less(const V &v_) const {
     if (same(v_)) return false;
     ZuArray v{v_};
     unsigned l = length();
@@ -284,7 +274,7 @@ public:
     if (int i = Ops::cmp(data(), v.data(), l > n ? n : l)) return i < 0;
     return l < n;
   }
-  template <typename V> ZuInline bool greater(const V &v_) const {
+  template <typename V> bool greater(const V &v_) const {
     if (same(v_)) return false;
     ZuArray v{v_};
     unsigned l = length();
@@ -292,7 +282,7 @@ public:
     if (int i = Ops::cmp(data(), v.data(), l > n ? n : l)) return i > 0;
     return l > n;
   }
-  template <typename V> ZuInline bool equals(const V &v_) const {
+  template <typename V> bool equals(const V &v_) const {
     if (same(v_)) return true;
     ZuArray v{v_};
     unsigned l = length();
@@ -302,19 +292,19 @@ public:
   }
 
   template <typename V>
-  ZuInline bool operator ==(const V &v) const { return equals(v); }
+  bool operator ==(const V &v) const { return equals(v); }
   template <typename V>
-  ZuInline bool operator !=(const V &v) const { return !equals(v); }
+  bool operator !=(const V &v) const { return !equals(v); }
   template <typename V>
-  ZuInline bool operator >(const V &v) const { return greater(v); }
+  bool operator >(const V &v) const { return greater(v); }
   template <typename V>
-  ZuInline bool operator >=(const V &v) const { return !less(v); }
+  bool operator >=(const V &v) const { return !less(v); }
   template <typename V>
-  ZuInline bool operator <(const V &v) const { return less(v); }
+  bool operator <(const V &v) const { return less(v); }
   template <typename V>
-  ZuInline bool operator <=(const V &v) const { return !greater(v); }
+  bool operator <=(const V &v) const { return !greater(v); }
 
-  ZuInline uint32_t hash() const { return ZuHash<ZuArray>::hash(*this); }
+  uint32_t hash() const { return ZuHash<ZuArray>::hash(*this); }
 
 private:
   T	*m_data;
@@ -322,14 +312,14 @@ private:
 };
 
 template <typename T> class ZuArray_Null {
-  ZuInline const T *data() const { return nullptr; }
-  ZuInline unsigned length() const { return 0; }
+  const T *data() const { return nullptr; }
+  unsigned length() const { return 0; }
 
-  ZuInline T operator [](int i) const { return ZuCmp<T>::null(); }
+  T operator [](int i) const { return ZuCmp<T>::null(); }
 
-  ZuInline bool operator !() const { return true; }
+  bool operator !() const { return true; }
 
-  ZuInline void offset(unsigned n) { }
+  void offset(unsigned n) { }
 };
 
 template <typename Cmp>
@@ -337,19 +327,21 @@ class ZuArray<ZuNull, Cmp> : public ZuArray_Null<ZuNull> {
 public:
   using Elem = ZuNull;
 
-  ZuInline ZuArray() { }
-  ZuInline ZuArray(const ZuArray &a) { }
-  ZuInline ZuArray &operator =(const ZuArray &a) { return *this; }
+  ZuArray() { }
+  ZuArray(const ZuArray &a) { }
+  ZuArray &operator =(const ZuArray &a) { return *this; }
 
-  template <typename A> ZuInline ZuArray(const A &a, typename ZuIfT<
-    ZuTraits<A>::IsArray && ZuConversion<
-      typename ZuTraits<A>::Elem, ZuNull>::Exists>::T *_ = 0) { }
-  template <typename A> ZuInline typename ZuIfT<
+  template <typename A>
+  ZuArray(const A &a, ZuIfT<
+      ZuTraits<A>::IsArray &&
+      ZuConversion<typename ZuTraits<A>::Elem, ZuNull>::Exists> *_ = 0) { }
+  template <typename A>
+  ZuIfT<
     ZuTraits<A>::IsArray &&
-    ZuConversion<typename ZuTraits<A>::Elem, ZuNull>::Exists, ZuArray &>::T
-      operator =(const A &a) { return *this; }
+    ZuConversion<typename ZuTraits<A>::Elem, ZuNull>::Exists, ZuArray &>
+  operator =(const A &a) { return *this; }
 
-  ZuInline ZuArray(const ZuNull *data, unsigned length) { }
+  ZuArray(const ZuNull *data, unsigned length) { }
 };
 
 template <typename Cmp>
@@ -357,19 +349,21 @@ class ZuArray<void, Cmp> : public ZuArray_Null<void> {
 public:
   using Elem = void;
 
-  ZuInline ZuArray() { }
-  ZuInline ZuArray(const ZuArray &a) { }
-  ZuInline ZuArray &operator =(const ZuArray &a) { return *this; }
+  ZuArray() { }
+  ZuArray(const ZuArray &a) { }
+  ZuArray &operator =(const ZuArray &a) { return *this; }
 
-  template <typename A> ZuInline ZuArray(const A &a, typename ZuIfT<
-    ZuTraits<A>::IsArray && ZuConversion<
-      typename ZuTraits<A>::Elem, void>::Exists>::T *_ = 0) { }
-  template <typename A> ZuInline typename ZuIfT<
+  template <typename A>
+  ZuArray(const A &a, ZuIfT<
+      ZuTraits<A>::IsArray &&
+      ZuConversion<typename ZuTraits<A>::Elem, void>::Exists> *_ = 0) { }
+  template <typename A>
+  ZuIfT<
     ZuTraits<A>::IsArray &&
-    ZuConversion<typename ZuTraits<A>::Elem, void>::Exists, ZuArray &>::T
-      operator =(const A &a) { return *this; }
+    ZuConversion<typename ZuTraits<A>::Elem, void>::Exists, ZuArray &>
+  operator =(const A &a) { return *this; }
 
-  ZuInline ZuArray(const void *data, unsigned length) { }
+  ZuArray(const void *data, unsigned length) { }
 };
 
 template <typename T, typename N>
@@ -387,7 +381,7 @@ struct ZuTraits<ZuArray<Elem_> > : public ZuBaseTraits<ZuArray<Elem_> > {
     IsWString = ZuConversion<wchar_t, Elem>::Same
   };
   template <typename U = T>
-  static typename ZuNotConst<U, Elem *>::T data(U &a) { return a.data(); }
+  static ZuNotConst<U, Elem *> data(U &a) { return a.data(); }
   static const Elem *data(const T &a) { return a.data(); }
   static unsigned length(const T &a) { return a.length(); }
 };

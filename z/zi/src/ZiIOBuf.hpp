@@ -142,61 +142,50 @@ private:
     length = total;
   }
 
-  template <typename U, typename R = void,
-    bool B = ZuPrint<U>::Delegate> struct MatchPDelegate;
-  template <typename U, typename R>
-  struct MatchPDelegate<U, R, true> { using T = R; };
-  template <typename U, typename R = void,
-    bool B = ZuPrint<U>::Buffer> struct MatchPBuffer;
-  template <typename U, typename R>
-  struct MatchPBuffer<U, R, true> { using T = R; };
+  template <typename U, typename R = void>
+  using MatchPDelegate = ZuIfT<ZuPrint<U>::Delegate, R>;
+  template <typename U, typename R = void>
+  using MatchPBuffer = ZuIfT<ZuPrint<U>::Buffer, R>;
 
   template <typename P>
-  typename MatchPDelegate<P>::T append(const P &p) {
+  MatchPDelegate<P> append(const P &p) {
     ZuPrint<P>::print(*this, p);
   }
   template <typename P>
-  typename MatchPBuffer<P>::T append(const P &p) {
+  MatchPBuffer<P> append(const P &p) {
     unsigned length_ = ZuPrint<P>::length(p);
     length += ZuPrint<P>::print(
 	reinterpret_cast<char *>(ensure(length + length_) + length),
 	length_, p);
   }
 
-  template <typename U, typename R = void,
-    bool B = ZuConversion<U, char>::Same> struct MatchChar;
-  template <typename U, typename R>
-  struct MatchChar<U, R, true> { using T = R; };
+  template <typename U, typename R = void>
+  using MatchChar = ZuSame<U, char, R>;
 
-  template <typename U, typename R = void,
-    bool S = ZuTraits<U>::IsString &&
-	     !ZuTraits<U>::IsWString &&
-	     !ZuTraits<U>::IsPrimitive
-    > struct MatchString;
-  template <typename U, typename R>
-  struct MatchString<U, R, true> { using T = R; };
+  template <typename U, typename R = void>
+  using MatchString = ZuIfT<
+    ZuTraits<U>::IsString &&
+    !ZuTraits<U>::IsWString &&
+    !ZuTraits<U>::IsPrimitive, R>;
 
-  template <typename U, typename R = void,
-    bool B = ZuTraits<U>::IsPrimitive &&
-	     ZuTraits<U>::IsReal &&
-	     !ZuConversion<U, char>::Same
-    > struct MatchReal;
-  template <typename U, typename R>
-  struct MatchReal<U, R, true> { using T = R; };
+  template <typename U, typename R = void>
+  using MatchReal = ZuIfT<
+    ZuTraits<U>::IsPrimitive &&
+    ZuTraits<U>::IsReal &&
+    !ZuConversion<U, char>::Same, R>;
 
-  template <typename U, typename R = void,
-    bool B = ZuPrint<U>::OK && !ZuPrint<U>::String> struct MatchPrint;
-  template <typename U, typename R>
-  struct MatchPrint<U, R, true> { using T = R; };
+  template <typename U, typename R = void>
+  using MatchPrint = ZuIfT<
+    ZuPrint<U>::OK && !ZuPrint<U>::String, R>;
 
 public:
   template <typename C>
-  typename MatchChar<C, ZiIOBuf_ &>::T operator <<(C c) {
+  MatchChar<C, ZiIOBuf_ &> operator <<(C c) {
     this->append(&c, 1);
     return *this;
   }
   template <typename S>
-  typename MatchString<S, ZiIOBuf_ &>::T operator <<(S &&s_) {
+  MatchString<S, ZiIOBuf_ &> operator <<(S &&s_) {
     ZuString s(ZuFwd<S>(s_));
     append(s.data(), s.length());
     return *this;
@@ -207,12 +196,12 @@ public:
     return *this;
   }
   template <typename R>
-  typename MatchReal<R, ZiIOBuf_ &>::T operator <<(const R &r) {
+  MatchReal<R, ZiIOBuf_ &> operator <<(const R &r) {
     append(ZuBoxed(r));
     return *this;
   }
   template <typename P>
-  typename MatchPrint<P, ZiIOBuf_ &>::T operator <<(const P &p) {
+  MatchPrint<P, ZiIOBuf_ &> operator <<(const P &p) {
     append(p);
     return *this;
   }

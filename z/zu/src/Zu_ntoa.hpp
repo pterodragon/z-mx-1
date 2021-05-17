@@ -99,10 +99,10 @@ namespace Zu_ntoa {
   template <typename T_> struct Unsigned<T_, 8> { using T = uint64_t; };
   template <typename T_> struct Unsigned<T_, 16> { using T = uint128_t; };
 
-  template <typename T, typename R = void> struct Is128Bit :
-    public ZuIfT<(sizeof(T) > 8) && ZuTraits<T>::IsIntegral, R> { };
-  template <typename T, typename R = void> struct Is64Bit :
-    public ZuIfT<(sizeof(T) <= 8) && ZuTraits<T>::IsIntegral, R> { };
+  template <typename T, typename R = void>
+  using Is128Bit = ZuIfT<(sizeof(T) > 8) && ZuTraits<T>::IsIntegral, R>;
+  template <typename T, typename R = void>
+  using Is64Bit = ZuIfT<(sizeof(T) <= 8) && ZuTraits<T>::IsIntegral, R>;
 
   // return log10(v) using binary clz, with a floor of 1 decimal digit
   template <unsigned Size> struct Log10;
@@ -241,12 +241,12 @@ namespace Zu_ntoa {
 
   // decimal handling for each log10 0..20
   template <typename T>
-  inline typename Is64Bit<T>::T Base10_print(T v_, unsigned n, char *buf) {
+  inline Is64Bit<T> Base10_print(T v_, unsigned n, char *buf) {
     uint64_t v = v_;
     do { buf[--n] = (v % 10) + '0'; v /= 10; } while (ZuLikely(n));
   }
   template <typename T>
-  inline typename Is128Bit<T>::T Base10_print(T v_, unsigned n, char *buf) {
+  inline Is128Bit<T> Base10_print(T v_, unsigned n, char *buf) {
     uint128_t v = v_;
     if (ZuLikely(v < 10000000000000000000ULL))
       Base10_print((uint64_t)v, n, buf);
@@ -254,7 +254,7 @@ namespace Zu_ntoa {
       do { buf[--n] = (v % 10) + '0'; v /= 10; } while (ZuLikely(n));
   }
   template <typename T>
-  inline typename Is64Bit<T>::T Base10_print_comma(
+  inline Is64Bit<T> Base10_print_comma(
       T v_, unsigned n, char *buf, char comma) {
     uint64_t v = v_;
     unsigned c = 3;
@@ -265,7 +265,7 @@ namespace Zu_ntoa {
     }
   }
   template <typename T>
-  inline typename Is128Bit<T>::T Base10_print_comma(
+  inline Is128Bit<T> Base10_print_comma(
       T v_, unsigned n, char *buf, char comma) {
     uint128_t v = v_;
     if (ZuLikely(v < 10000000000000000000ULL))
@@ -394,24 +394,24 @@ namespace Zu_ntoa {
 
   // hexadecimal handling for each log16 0..16
   template <bool Upper>
-  ZuInline static typename ZuIfT<Upper, char>::T hexDigit(unsigned v) {
+  ZuInline static ZuIfT<Upper, char> hexDigit(unsigned v) {
     static constexpr const char digits[] = "0123456789ABCDEF";
     return digits[v];
     // return v < 10 ? v + '0' : v - 10 + 'A';
   }
   template <bool Upper>
-  ZuInline static typename ZuIfT<!Upper, char>::T hexDigit(unsigned v) {
+  ZuInline static ZuIfT<!Upper, char> hexDigit(unsigned v) {
     static constexpr const char digits[] = "0123456789abcdef";
     return digits[v];
     // return v < 10 ? v + '0' : v - 10 + 'a';
   }
   template <typename T>
-  typename Is64Bit<T>::T Base16_print(T v_, unsigned n, char *buf) {
+  Is64Bit<T> Base16_print(T v_, unsigned n, char *buf) {
     uint64_t v = v_;
     do { buf[--n] = hexDigit<0>(v & 0xf); v >>= 4U; } while (ZuLikely(n));
   }
   template <typename T>
-  typename Is128Bit<T>::T Base16_print(T v_, unsigned n, char *buf) {
+  Is128Bit<T> Base16_print(T v_, unsigned n, char *buf) {
     uint128_t v = v_;
     if (ZuLikely(!(v>>64U)))
       Base16_print((uint64_t)v, n, buf);
@@ -419,13 +419,13 @@ namespace Zu_ntoa {
       do { buf[--n] = hexDigit<0>(v & 0xf); v >>= 4U; } while (ZuLikely(n));
   }
   template <typename T>
-  typename Is64Bit<T>::T Base16_print_upper(
+  Is64Bit<T> Base16_print_upper(
       T v_, unsigned n, char *buf) {
     uint64_t v = v_;
     do { buf[--n] = hexDigit<1>(v & 0xf); v >>= 4U; } while (ZuLikely(n));
   }
   template <typename T>
-  typename Is128Bit<T>::T Base16_print_upper(
+  Is128Bit<T> Base16_print_upper(
       T v_, unsigned n, char *buf) {
     uint128_t v = v_;
     if (ZuLikely(!(v>>64U)))

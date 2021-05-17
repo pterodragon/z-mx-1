@@ -426,7 +426,7 @@ namespace MxMDStream {
       Wake,
       EndOfSnapshot,
       Login,
-      ResendReq>::T Largest;
+      ResendReq> Largest;
 
   struct Buf {
     char	data[sizeof(Hdr) + sizeof(Largest)];

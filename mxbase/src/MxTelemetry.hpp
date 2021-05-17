@@ -118,7 +118,7 @@ namespace MxTelemetry {
   typedef ZuLargest<
      Heap, HashTbl, Thread, Multiplexer, Socket, Queue,
      Engine, Link,
-     DBEnv, DBHost, DB>::T Largest;
+     DBEnv, DBHost, DB> Largest;
 
   struct Buf {
     char	data[sizeof(Hdr) + sizeof(Largest)];

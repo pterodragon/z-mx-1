@@ -118,7 +118,7 @@ namespace Telemetry {
   using TypeList = ZvTelemetry::TypeList;
 
   template <typename T_> struct FBSType { using T = typename T_::FBS; };
-  using FBSTypeList = ZuTypeMap<FBSType, TypeList>::T;
+  using FBSTypeList =ZuTypeMap<FBSType, TypeList>;
 
   template <typename Data> struct Item__ {
     using TelKey = typename Data::Key;
@@ -267,8 +267,8 @@ namespace Telemetry {
     using T = AlertArray;
   };
 
-  using ContainerList = ZuTypeMap<Container, TypeList>::T;
-  using Containers = ZuTypeApply<ZuTuple, ContainerList>::T;
+  using ContainerList =ZuTypeMap<Container, TypeList>;
+  using Containers =ZuTypeApply<ZuTuple, ContainerList>;
 
   template <typename T> using Item = typename Container<T>::T::Node;
 }
@@ -492,64 +492,64 @@ namespace GtkTree {
 
     // parent() - child->parent type map
     template <typename T>
-    static typename ZuSame<T, App, Root>::T *parent(void *ptr) {
+    static ZuSame<T, App, Root> *parent(void *ptr) {
       return static_cast<Root *>(ptr);
     }
     template <typename T>
-    static typename ZuIfT<
+    static ZuIfT<
 	ZuConversion<T, HeapParent>::Same ||
 	ZuConversion<T, HashTblParent>::Same ||
 	ZuConversion<T, ThreadParent>::Same ||
 	ZuConversion<T, MxParent>::Same ||
 	ZuConversion<T, QueueParent>::Same ||
 	ZuConversion<T, EngineParent>::Same ||
-	ZuConversion<T, DBEnv>::Same, App>::T *parent(void *ptr) {
+	ZuConversion<T, DBEnv>::Same, App> *parent(void *ptr) {
       return static_cast<App *>(ptr);
     }
     template <typename T>
-    static typename ZuSame<T, Heap, HeapParent>::T *parent(void *ptr) {
+    static ZuSame<T, Heap, HeapParent> *parent(void *ptr) {
       return static_cast<HeapParent *>(ptr);
     }
     template <typename T>
-    static typename ZuSame<T, HashTbl, HashTblParent>::T *parent(void *ptr) {
+    static ZuSame<T, HashTbl, HashTblParent> *parent(void *ptr) {
       return static_cast<HashTblParent *>(ptr);
     }
     template <typename T>
-    static typename ZuSame<T, Thread, ThreadParent>::T *parent(void *ptr) {
+    static ZuSame<T, Thread, ThreadParent> *parent(void *ptr) {
       return static_cast<ThreadParent *>(ptr);
     }
     template <typename T>
-    static typename ZuSame<T, Mx, MxParent>::T *parent(void *ptr) {
+    static ZuSame<T, Mx, MxParent> *parent(void *ptr) {
       return static_cast<MxParent *>(ptr);
     }
     template <typename T>
-    static typename ZuSame<T, Queue, QueueParent>::T *parent(void *ptr) {
+    static ZuSame<T, Queue, QueueParent> *parent(void *ptr) {
       return static_cast<QueueParent *>(ptr);
     }
     template <typename T>
-    static typename ZuSame<T, Engine, EngineParent>::T *parent(void *ptr) {
+    static ZuSame<T, Engine, EngineParent> *parent(void *ptr) {
       return static_cast<EngineParent *>(ptr);
     }
     template <typename T>
-    static typename ZuSame<T, Socket, Mx>::T *parent(void *ptr) {
+    static ZuSame<T, Socket, Mx> *parent(void *ptr) {
       return static_cast<Mx *>(ptr);
     }
     template <typename T>
-    static typename ZuSame<T, Link, Engine>::T *parent(void *ptr) {
+    static ZuSame<T, Link, Engine> *parent(void *ptr) {
       return static_cast<Engine *>(ptr);
     }
     template <typename T>
-    static typename ZuIfT<
+    static ZuIfT<
 	ZuConversion<T, DBHostParent>::Same ||
-	ZuConversion<T, DBParent>::Same, DBEnv>::T *parent(void *ptr) {
+	ZuConversion<T, DBParent>::Same, DBEnv> *parent(void *ptr) {
       return static_cast<DBEnv *>(ptr);
     }
     template <typename T>
-    static typename ZuSame<T, DBHost, DBHostParent>::T *parent(void *ptr) {
+    static ZuSame<T, DBHost, DBHostParent> *parent(void *ptr) {
       return static_cast<DBHostParent *>(ptr);
     }
     template <typename T>
-    static typename ZuSame<T, DB, DBParent>::T *parent(void *ptr) {
+    static ZuSame<T, DB, DBParent> *parent(void *ptr) {
       return static_cast<DBParent *>(ptr);
     }
 
@@ -564,15 +564,15 @@ namespace GtkTree {
       KeyPrint_(Key_ &&key_) : key{ZuFwd<Key_>(key_)} { }
       auto p0() const { return key.template p<0>(); }
       template <unsigned N = Key::N>
-      auto p1(typename ZuIfT<(N <= 1)>::T *_ = 0) const { return ""; }
+      auto p1(ZuIfT<(N <= 1)> *_ = 0) const { return ""; }
       template <unsigned N = Key::N>
-      auto p1(typename ZuIfT<(N > 1)>::T *_ = 0) const {
+      auto p1(ZuIfT<(N > 1)> *_ = 0) const {
 	return key.template p<1>();
       }
       template <unsigned N = Key::N>
-      auto p2(typename ZuIfT<(N <= 2)>::T *_ = 0) const { return ""; }
+      auto p2(ZuIfT<(N <= 2)> *_ = 0) const { return ""; }
       template <unsigned N = Key::N>
-      auto p2(typename ZuIfT<(N > 2)>::T *_ = 0) const {
+      auto p2(ZuIfT<(N > 2)> *_ = 0) const {
 	return key.template p<2>();
       }
     };
@@ -582,10 +582,10 @@ namespace GtkTree {
       using KeyPrint_<KeyPrint, Key>::KeyPrint_;
     };
     template <typename T, typename Key>
-    static typename ZuIfT<
+    static ZuIfT<
       !ZuConversion<T, HashTbl>::Same &&
       !ZuConversion<T, Queue>::Same,
-      KeyPrint<Key> >::T keyPrintType();
+      KeyPrint<Key> > keyPrintType();
     // override addr for hash tables
     template <typename Key>
     struct HashTblKeyPrint : public KeyPrint_<HashTblKeyPrint<Key>, Key> {
@@ -593,8 +593,8 @@ namespace GtkTree {
       auto p1() { return ZuBoxed(this->key.template p<1>()).hex(); }
     };
     template <typename T, typename Key>
-    static typename ZuIfT<
-      ZuConversion<T, HashTbl>::Same, HashTblKeyPrint<Key> >::T
+    static ZuIfT<
+      ZuConversion<T, HashTbl>::Same, HashTblKeyPrint<Key> >
     keyPrintType();
     // override type for queues
     template <typename Key>
@@ -605,8 +605,8 @@ namespace GtkTree {
       }
     };
     template <typename T, typename Key>
-    static typename ZuIfT<
-      ZuConversion<T, Queue>::Same, QueueKeyPrint<Key> >::T
+    static ZuIfT<
+      ZuConversion<T, Queue>::Same, QueueKeyPrint<Key> >
     keyPrintType();
 
     gint get_n_columns() { return NCols; }
@@ -1390,10 +1390,10 @@ private:
     });
   }
   template <typename FBS>
-  typename ZuIsNot<ZvTelemetry::fbs::Alert, FBS>::T
+  ZuIsNot<ZvTelemetry::fbs::Alert, FBS>
   processTel3(CliLink_ *cliLink, const FBS *fbs) {
     ZuConstant<ZuTypeIndex<FBS, Telemetry::FBSTypeList>::I> i;
-    using T = typename ZuType<i, Telemetry::TypeList>::T;
+    using T = ZuType<i, Telemetry::TypeList>;
     auto &container = cliLink->telemetry.p<i>();
     using Item = TelItem<T>;
     Item *item;
@@ -1439,7 +1439,7 @@ private:
     auto appGtkRow = GtkTree::row(appItem);
     auto &parent = parentFn(appGtkRow);
     if (parent.row() < 0) m_gtkModel->add(&parent, appGtkRow);
-    using GtkRow = typename ZuDecay<decltype(*GtkTree::row(item))>::T;
+    using GtkRow = ZuDecay<decltype(*GtkTree::row(item))>;
     m_gtkModel->add(new GtkRow{item}, &parent);
   }
   void addGtkRow(CliLink_ *cliLink, TelItem<ZvTelemetry::Heap> *item) {
@@ -1512,7 +1512,7 @@ private:
     auto dbEnvGtkRow = GtkTree::row(dbEnvItem);
     auto &parent = parentFn(dbEnvGtkRow);
     if (parent.row() < 0) m_gtkModel->add(&parent, dbEnvGtkRow);
-    using GtkRow = typename ZuDecay<decltype(*GtkTree::row(item))>::T;
+    using GtkRow = ZuDecay<decltype(*GtkTree::row(item))>;
     m_gtkModel->add(new GtkRow{item}, &parent);
   }
   void addGtkRow(CliLink_ *cliLink, TelItem<ZvTelemetry::DBHost> *item) {
@@ -1528,10 +1528,10 @@ private:
 	});
   }
   template <typename FBS>
-  typename ZuIs<ZvTelemetry::fbs::Alert, FBS, bool>::T
+  ZuIs<ZvTelemetry::fbs::Alert, FBS, bool>
   processTel3(CliLink_ *cliLink, const FBS *fbs) {
     ZuConstant<ZuTypeIndex<FBS, Telemetry::FBSTypeList>::I> i;
-    using T = typename ZuType<i, Telemetry::TypeList>::T;
+    using T = ZuType<i, Telemetry::TypeList>;
     auto &container = cliLink->telemetry.p<i>();
     alert(new (container.data.push()) ZvTelemetry::load<T>{fbs});
     return true;

@@ -336,11 +336,10 @@ private:
       public ZuIf<NullObject, Object,
 	ZuConversion<ZuNull, Object>::Is ||
 	(NodeIsKey && ZuConversion<Object, Key>::Is) ||
-	(NodeIsVal && ZuConversion<Object, Val>::Is)>::T,
-      public ZuIf<NodeFn_Unique<Node>, NodeFn_Dup<Node>, Unique>::T,
+	(NodeIsVal && ZuConversion<Object, Val>::Is)>,
+      public ZuIf<NodeFn_Unique<Node>, NodeFn_Dup<Node>, Unique>,
       public Heap {
-    using Base =
-      typename ZuIf<NodeFn_Unique<Node>, NodeFn_Dup<Node>, Unique>::T;
+    using Base = ZuIf<NodeFn_Unique<Node>, NodeFn_Dup<Node>, Unique>;
 
   public:
     NodeFn_() { }
@@ -467,8 +466,8 @@ public:
     ++m_count;
   }
   template <typename Key__>
-  typename ZuNotConvertible<
-	typename ZuDeref<Key__>::T, NodeRef, NodeRef>::T
+  ZuNotConvertible<
+	ZuDeref<Key__>, NodeRef, NodeRef>
       add(Key__ &&key) {
     NodeRef node = new Node(ZuFwd<Key__>(key));
     add(node);
@@ -545,8 +544,8 @@ public:
   }
 
   template <typename Index_>
-  typename ZuIfT<
-    !ZuConversion<Index_, Node *>::Exists, NodeRef>::T
+  ZuIfT<
+    !ZuConversion<Index_, Node *>::Exists, NodeRef>
       del(const Index_ &index) {
     Guard guard(m_lock);
     Node *node;
@@ -635,9 +634,9 @@ public:
   }
 
   template <typename Index_, typename Val_>
-  typename ZuIfT<
+  ZuIfT<
     !ZuConversion<Index_, Node *>::Exists &&
-    ZuConversion<Val_, Val>::Exists, NodeRef>::T
+    ZuConversion<Val_, Val>::Exists, NodeRef>
       del(const Index_ &index, const Val_ &val) {
     Guard guard(m_lock);
     Node *node;
@@ -667,10 +666,10 @@ public:
     return nullptr;
   }
   template <typename Index_, typename Key__>
-  typename ZuIfT<
+  ZuIfT<
     !ZuConversion<Index_, Node *>::Exists &&
     ZuConversion<Key__, Key>::Exists &&
-    !ZuConversion<Key__, Val>::Exists, NodeRef>::T
+    !ZuConversion<Key__, Val>::Exists, NodeRef>
       del(const Index_ &index, const Key__ &key) {
     Guard guard(m_lock);
     Node *node;
@@ -1111,12 +1110,12 @@ protected:
   using Iterator_ = ZmRBTreeIterator_<ZmRBTree, Direction>;
 
   template <int Direction>
-  typename ZuIfT<(Direction >= 0)>::T startIterate(
+  ZuIfT<(Direction >= 0)> startIterate(
       Iterator_<Direction> &iterator) {
     iterator.m_node = m_minimum;
   }
   template <int Direction>
-  typename ZuIfT<(Direction < 0)>::T startIterate(
+  ZuIfT<(Direction < 0)> startIterate(
       Iterator_<Direction> &iterator) {
     iterator.m_node = m_maximum;
   }
@@ -1127,24 +1126,21 @@ protected:
   }
 
   template <int Direction>
-  typename ZuIfT<(Direction > 0), Node *>::T iterate(
-      Iterator_<Direction> &iterator) {
+  ZuIfT<(Direction > 0), Node *> iterate(Iterator_<Direction> &iterator) {
     Node *node = iterator.m_node;
     if (!node) return nullptr;
     iterator.m_node = next(node);
     return node;
   }
   template <int Direction>
-  typename ZuIfT<(!Direction), Node *>::T iterate(
-      Iterator_<Direction> &iterator) {
+  ZuIfT<(!Direction), Node *> iterate(Iterator_<Direction> &iterator) {
     Node *node = iterator.m_node;
     if (!node) return nullptr;
     iterator.m_node = node->Fn::dup();
     return node;
   }
   template <int Direction>
-  typename ZuIfT<(Direction < 0), Node *>::T iterate(
-      Iterator_<Direction> &iterator) {
+  ZuIfT<(Direction < 0), Node *> iterate(Iterator_<Direction> &iterator) {
     Node *node = iterator.m_node;
     if (!node) return nullptr;
     iterator.m_node = prev(node);

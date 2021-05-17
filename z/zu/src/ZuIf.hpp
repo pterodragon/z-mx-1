@@ -19,7 +19,7 @@
 
 // compile-time ?:
 //
-// ZuIf<typename T1, typename T2, bool B>::T evaluates to B ? T1 : T2
+// ZuIf<typename T1, typename T2, bool B> evaluates to B ? T1 : T2
 
 #ifndef ZuIf_HPP
 #define ZuIf_HPP
@@ -32,12 +32,14 @@
 #pragma once
 #endif
 
-template <typename T1, typename T2, bool B> struct ZuIf;
-template <typename T1, typename T2> struct ZuIf<T1, T2, true> {
+template <typename T1, typename T2, bool B> struct ZuIf_;
+template <typename T1, typename T2> struct ZuIf_<T1, T2, true> {
   using T = T1;
 };
-template <typename T1, typename T2> struct ZuIf<T1, T2, false> {
+template <typename T1, typename T2> struct ZuIf_<T1, T2, false> {
   using T = T2;
 };
+template <typename T1, typename T2, bool B>
+using ZuIf = typename ZuIf_<T1, T2, B>::T;
 
 #endif /* ZuIf_HPP */

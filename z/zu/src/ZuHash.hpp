@@ -399,7 +399,7 @@ template <typename T> struct ZuHash_<T, true> {
   template <typename S>
   ZuInline static uint32_t hash(const S &s) {
     using Traits = ZuTraits<S>;
-    using Char = typename ZuDecay<typename Traits::Elem>::T;
+    using Char = ZuDecay<typename Traits::Elem>;
     return ZuStringHash<Char>::hash(Traits::data(s), Traits::length(s));
   }
 };
@@ -407,6 +407,6 @@ template <typename T> struct ZuHash_<T, true> {
 // generic template
 
 template <typename T> struct ZuHash :
-  public ZuHash_<typename ZuDecay<T>::T, ZuTraits<T>::IsString> { };
+  public ZuHash_<ZuDecay<T>, ZuTraits<T>::IsString> { };
 
 #endif /* ZuHash_HPP */

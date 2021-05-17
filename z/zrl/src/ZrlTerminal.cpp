@@ -1116,7 +1116,9 @@ process_char:
 
     // vkey matching
     if (!utfn) {
+#ifdef _WIN32
       if (c < 0x100)
+#endif
 	if (auto action = nextVKMatch->match(c)) {
 	  if (action->next) {
 	    timeout = m_vkeyInterval;

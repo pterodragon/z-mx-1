@@ -54,28 +54,32 @@ template <typename U, typename W = wchar_t,
 	     ZuConversion<U, unsigned short>::Same ||
 	     ZuConversion<U, int16_t>::Same ||
 	     ZuConversion<U, uint16_t>::Same)>
-struct ZuNormChar { using T = U; };
+struct ZuNormChar_ { using T = U; };
 
 template <typename U, typename W, bool _>
-struct ZuNormChar<U, W, 1, _> { using T = char; };
+struct ZuNormChar_<U, W, 1, _> { using T = char; };
 template <typename U, typename W, bool _>
-struct ZuNormChar<const U, W, 1, _> { using T = const char; };
+struct ZuNormChar_<const U, W, 1, _> { using T = const char; };
 template <typename U, typename W, bool _>
-struct ZuNormChar<volatile U, W, 1, _> { using T = volatile char; };
+struct ZuNormChar_<volatile U, W, 1, _> { using T = volatile char; };
 template <typename U, typename W, bool _>
-struct ZuNormChar<const volatile U, W, 1, _> { using T = const volatile char; };
+struct ZuNormChar_<const volatile U, W, 1, _> {
+  using T = const volatile char;
+};
 
 template <typename U, typename W>
-struct ZuNormChar<U, W, 0, 1> { using T = W; };
+struct ZuNormChar_<U, W, 0, 1> { using T = W; };
 template <typename U, typename W>
-struct ZuNormChar<const U, W, 0, 1> { using T = const W; };
+struct ZuNormChar_<const U, W, 0, 1> { using T = const W; };
 template <typename U, typename W>
-struct ZuNormChar<volatile U, W, 0, 1> { using T = volatile W; };
+struct ZuNormChar_<volatile U, W, 0, 1> { using T = volatile W; };
 template <typename U, typename W>
-struct ZuNormChar<const volatile U, W, 0, 1> { using T = const volatile W; };
+struct ZuNormChar_<const volatile U, W, 0, 1> { using T = const volatile W; };
+
+template <typename U>
+using ZuNormChar = typename ZuNormChar_<U>::T;
 
 template <typename U1, typename U2>
-struct ZuEquivChar : public ZuConversion<
-  typename ZuNormChar<U1>::T, typename ZuNormChar<U2>::T> { };
+struct ZuEquivChar : public ZuConversion<ZuNormChar<U1>, ZuNormChar<U2>> { };
 
 #endif /* ZuEquivChar_HPP */

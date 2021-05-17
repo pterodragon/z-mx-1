@@ -20,7 +20,7 @@ template <typename T> struct Index {
   enum { I = T::I };
 };
 
-using Sorted = typename ZuTypeSort<Index, A, B, C, D, E>::T;
+using Sorted = ZuTypeSort<Index, A, B, C, D, E>;
 
 struct X {
   X() = default;

@@ -131,8 +131,8 @@ template <> struct ZuConversion_Void<const volatile void>
   { using T = void; };
 
 template <typename T1, typename T2> class ZuConversion {
-  using U1 = typename ZuConversion_Void<typename ZuDeref<T1>::T>::T;
-  using U2 = typename ZuConversion_Void<typename ZuDeref<T2>::T>::T;
+  using U1 = typename ZuConversion_Void<ZuDeref<T1>>::T;
+  using U2 = typename ZuConversion_Void<ZuDeref<T2>>::T;
 public:
   enum {
     Exists = ZuConversion_<U1, U2>::Exists,
@@ -144,21 +144,21 @@ public:
 
 // SFINAE techniques...
 template <typename T1, typename T2, typename R = void>
-struct ZuSame : public ZuIfT<ZuConversion<T1, T2>::Same, R> { };
+using ZuSame = ZuIfT<ZuConversion<T1, T2>::Same, R>;
 template <typename T1, typename T2, typename R = void>
-struct ZuNotSame : public ZuIfT<!ZuConversion<T1, T2>::Same, R> { };
+using ZuNotSame = ZuIfT<!ZuConversion<T1, T2>::Same, R>;
 template <typename T1, typename T2, typename R = void>
-struct ZuConvertible : public ZuIfT<ZuConversion<T1, T2>::Exists, R> { };
+using ZuConvertible = ZuIfT<ZuConversion<T1, T2>::Exists, R>;
 template <typename T1, typename T2, typename R = void>
-struct ZuNotConvertible : public ZuIfT<!ZuConversion<T1, T2>::Exists, R> { };
+using ZuNotConvertible = ZuIfT<!ZuConversion<T1, T2>::Exists, R>;
 template <typename T1, typename T2, typename R = void>
-struct ZuIsBase : public ZuIfT<ZuConversion<T1, T2>::Base, R> { };
+using ZuIsBase = ZuIfT<ZuConversion<T1, T2>::Base, R>;
 template <typename T1, typename T2, typename R = void>
-struct ZuNotBase : public ZuIfT<!ZuConversion<T1, T2>::Base, R> { };
+using ZuNotBase = ZuIfT<!ZuConversion<T1, T2>::Base, R>;
 template <typename T1, typename T2, typename R = void>
-struct ZuIs : public ZuIfT<ZuConversion<T1, T2>::Is, R> { };
+using ZuIs = ZuIfT<ZuConversion<T1, T2>::Is, R>;
 template <typename T1, typename T2, typename R = void>
-struct ZuIsNot : public ZuIfT<!ZuConversion<T1, T2>::Is, R> { };
+using ZuIsNot = ZuIfT<!ZuConversion<T1, T2>::Is, R>;
 
 #ifdef _MSC_VER
 #pragma warning(pop)

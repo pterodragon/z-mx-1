@@ -74,7 +74,7 @@ template <typename T_> struct ZtArray_Char2 { using T = ZuNull; };
 template <> struct ZtArray_Char2<char> { using T = wchar_t; };
 template <> struct ZtArray_Char2<wchar_t> { using T = char; };
 
-template <typename T_, class Cmp_ = ZuCmp<T_> >
+template <typename T_, class Cmp_ = ZuCmp<T_>>
 class ZtArray : public ZtArray_<T_>, public ZuArrayFn<T_, Cmp_> {
   template <typename, class> friend class ZtArray;
 
@@ -96,7 +96,7 @@ private:
       ZuConversion<ZtArray_<typename ZuTraits<U>::Elem>, U>::Base };
   };
   template <typename U, typename R = void>
-  struct MatchZtArray : public ZuIfT<IsZtArray<U>::OK, R> { };
+  using MatchZtArray = ZuIfT<IsZtArray<U>::OK, R>;
 
   // from string literal with same char
   template <typename U, typename V = Char> struct IsStrLiteral {
@@ -105,7 +105,7 @@ private:
       ZuConversion<typename ZuTraits<U>::Elem, V>::Same };
   };
   template <typename U, typename R = void>
-  struct MatchStrLiteral : public ZuIfT<IsStrLiteral<U>::OK, R> { };
+  using MatchStrLiteral = ZuIfT<IsStrLiteral<U>::OK, R>;
 
   // from some other string with equivalent char (including string literals)
   template <typename U, typename V = Char> struct IsAnyString {
@@ -115,14 +115,14 @@ private:
       ZuEquivChar<typename ZuTraits<U>::Elem, V>::Same };
   };
   template <typename U, typename R = void>
-  struct MatchAnyString : public ZuIfT<IsAnyString<U>::OK, R> { };
+  using MatchAnyString = ZuIfT<IsAnyString<U>::OK, R>;
 
   // from some other string with equivalent char (other than a string literal)
   template <typename U, typename V = Char> struct IsString {
     enum { OK = !IsStrLiteral<U>::OK && IsAnyString<U>::OK };
   };
   template <typename U, typename R = void>
-  struct MatchString : public ZuIfT<IsString<U>::OK, R> { };
+  using MatchString = ZuIfT<IsString<U>::OK, R>;
 
   // from char2 string (requires conversion)
   template <typename U, typename V = Char2> struct IsChar2String {
@@ -131,7 +131,7 @@ private:
       ZuEquivChar<typename ZuTraits<U>::Elem, V>::Same };
   };
   template <typename U, typename R = void>
-  struct MatchChar2String : public ZuIfT<IsChar2String<U>::OK, R> { };
+  using MatchChar2String = ZuIfT<IsChar2String<U>::OK, R>;
 
   // from another array type with convertible element type (not a string)
   template <typename U, typename V = T> struct IsArray {
@@ -144,7 +144,7 @@ private:
       ZuConversion<typename ZuTraits<U>::Elem, V>::Exists };
   };
   template <typename U, typename R = void>
-  struct MatchArray : public ZuIfT<IsArray<U>::OK, R> { };
+  using MatchArray = ZuIfT<IsArray<U>::OK, R>;
 
   // from another array type with same element type (not a string)
   template <typename U, typename V = T> struct IsSameArray {
@@ -155,7 +155,7 @@ private:
       ZuConversion<typename ZuTraits<U>::Elem, V>::Same };
   };
   template <typename U, typename R = void>
-  struct MatchSameArray : public ZuIfT<IsSameArray<U>::OK, R> { };
+  using MatchSameArray = ZuIfT<IsSameArray<U>::OK, R>;
 
   // from another array type with convertible element type (not a string)
   template <typename U, typename V = T> struct IsDiffArray {
@@ -167,7 +167,7 @@ private:
       ZuConversion<typename ZuTraits<U>::Elem, V>::Exists };
   };
   template <typename U, typename R = void>
-  struct MatchDiffArray : public ZuIfT<IsDiffArray<U>::OK, R> { };
+  using MatchDiffArray = ZuIfT<IsDiffArray<U>::OK, R>;
 
   // from individual char2 (requires conversion)
   template <typename U, typename V = Char2> struct IsChar2 {
@@ -175,7 +175,7 @@ private:
       !ZuEquivChar<U, wchar_t>::Same };
   };
   template <typename U, typename R = void>
-  struct MatchChar2 : public ZuIfT<IsChar2<U>::OK, R> { };
+  using MatchChar2 = ZuIfT<IsChar2<U>::OK, R>;
 
   // from printable type (if this is a char array)
   template <typename U, typename V = Char> struct IsPrint {
@@ -183,17 +183,17 @@ private:
       ZuPrint<U>::OK && !ZuPrint<U>::String };
   };
   template <typename U, typename R = void>
-  struct MatchPrint : public ZuIfT<IsPrint<U>::OK, R> { };
+  using MatchPrint = ZuIfT<IsPrint<U>::OK, R>;
   template <typename U, typename V = Char> struct IsPDelegate {
     enum { OK = ZuEquivChar<char, V>::Same && ZuPrint<U>::Delegate };
   };
   template <typename U, typename R = void>
-  struct MatchPDelegate : public ZuIfT<IsPDelegate<U>::OK, R> { };
+  using MatchPDelegate = ZuIfT<IsPDelegate<U>::OK, R>;
   template <typename U, typename V = Char> struct IsPBuffer {
     enum { OK = ZuEquivChar<char, V>::Same && ZuPrint<U>::Buffer };
   };
   template <typename U, typename R = void>
-  struct MatchPBuffer : public ZuIfT<IsPBuffer<U>::OK, R> { };
+  using MatchPBuffer = ZuIfT<IsPBuffer<U>::OK, R>;
 
   // from real primitive types other than chars (if this is a char array)
   template <typename U, typename V = T> struct IsReal {
@@ -202,7 +202,7 @@ private:
       !ZuTraits<U>::IsArray };
   };
   template <typename U, typename R = void>
-  struct MatchReal : public ZuIfT<IsReal<U>::OK, R> { };
+  using MatchReal = ZuIfT<IsReal<U>::OK, R>;
 
   // from individual element
   template <typename U, typename V = T> struct IsElem {
@@ -216,7 +216,7 @@ private:
        ZuConversion<U, V>::Exists) };
   };
   template <typename U, typename R = void>
-  struct MatchElem : public ZuIfT<IsElem<U>::OK, R> { };
+  using MatchElem = ZuIfT<IsElem<U>::OK, R>;
 
   // an unsigned|int|size_t parameter to the constructor is a buffer size
   template <typename U, typename V = T> struct IsCtorSize {
@@ -226,7 +226,7 @@ private:
       ZuConversion<U, size_t>::Same };
   };
   template <typename U, typename R = void>
-  struct MatchCtorSize : public ZuIfT<IsCtorSize<U>::OK, R> { };
+  using MatchCtorSize = ZuIfT<IsCtorSize<U>::OK, R>;
 
   // construction from individual element
   template <typename U, typename V = T, typename W = Char2> struct IsCtorElem {
@@ -241,7 +241,7 @@ private:
       ZuConversion<U, V>::Exists };
   };
   template <typename U, typename R = void>
-  struct MatchCtorElem : public ZuIfT<IsCtorElem<U>::OK, R> { };
+  using MatchCtorElem = ZuIfT<IsCtorElem<U>::OK, R>;
 
 public:
   ZtArray() { null_(); }
@@ -272,7 +272,7 @@ public:
 
 private:
   template <typename A_> struct Fwd_ZtArray {
-    using A = typename ZuDecay<A_>::T;
+    using A = ZuDecay<A_>;
 
     static void ctor_(ZtArray *this_, const A &a) {
       this_->copy__(a.m_data, a.length());
@@ -325,7 +325,7 @@ private:
     }
   };
   template <typename A_> struct Fwd_Array {
-    using A = typename ZuDecay<A_>::T;
+    using A = ZuDecay<A_>;
     using Elem = typename ZuArrayT<A>::Elem;
 
     static void ctor_(ZtArray *this_, const A &a_) {
@@ -373,24 +373,24 @@ private:
     }
   };
 
-  template <typename A> typename MatchZtArray<A>::T ctor(A &&a)
+  template <typename A> MatchZtArray<A> ctor(A &&a)
     { Fwd_ZtArray<A>::ctor_(this, ZuFwd<A>(a)); }
-  template <typename A> typename MatchArray<A>::T ctor(A &&a)
+  template <typename A> MatchArray<A> ctor(A &&a)
     { Fwd_Array<A>::ctor_(this, ZuFwd<A>(a)); }
 
-  template <typename S> typename MatchStrLiteral<S>::T ctor(S &&s_)
+  template <typename S> MatchStrLiteral<S> ctor(S &&s_)
     { ZuArray<const T> s(s_); shadow_(s.data(), s.length()); }
-  template <typename S> typename MatchString<S>::T ctor(S &&s_)
+  template <typename S> MatchString<S> ctor(S &&s_)
     { ZuArray<const T> s(s_); copy__(s.data(), s.length()); }
 
-  template <typename S> typename MatchChar2String<S>::T ctor(S &&s_) {
+  template <typename S> MatchChar2String<S> ctor(S &&s_) {
     ZuArray<const Char2> s(s_);
     unsigned o = ZuUTF<Char, Char2>::len(s);
     if (!o) { null_(); return; }
     alloc_(o, 0);
     length_(ZuUTF<Char, Char2>::cvt(ZuArray<Char>(m_data, o), s));
   }
-  template <typename C> typename MatchChar2<C>::T ctor(C c) {
+  template <typename C> MatchChar2<C> ctor(C c) {
     ZuArray<const Char2> s{&c, 1};
     unsigned o = ZuUTF<Char, Char2>::len(s);
     if (!o) { null_(); return; }
@@ -398,21 +398,21 @@ private:
     length_(ZuUTF<Char, Char2>::cvt(ZuArray<Char>(m_data, o), s));
   }
 
-  template <typename P> typename MatchPDelegate<P>::T ctor(const P &p)
+  template <typename P> MatchPDelegate<P> ctor(const P &p)
     { null_(); ZuPrint<P>::print(*this, p); }
-  template <typename P> typename MatchPBuffer<P>::T ctor(const P &p) {
+  template <typename P> MatchPBuffer<P> ctor(const P &p) {
     unsigned o = ZuPrint<P>::length(p);
     if (!o) { null_(); return; }
     alloc_(o, 0);
     length_(ZuPrint<P>::print(reinterpret_cast<char *>(m_data), o, p));
   }
 
-  template <typename V> typename MatchCtorSize<V>::T ctor(V size) {
+  template <typename V> MatchCtorSize<V> ctor(V size) {
     if (!size) { null_(); return; }
     alloc_(size, 0);
   }
 
-  template <typename R> typename MatchCtorElem<R>::T ctor(R &&r) {
+  template <typename R> MatchCtorElem<R> ctor(R &&r) {
     unsigned z = grow_(0, 1);
     m_data = (T *)::malloc(z * sizeof(T));
     if (!m_data) throw std::bad_alloc{};
@@ -422,22 +422,22 @@ private:
   }
 
 public:
-  template <typename A> typename MatchZtArray<A>::T copy(const A &a) {
+  template <typename A> MatchZtArray<A> copy(const A &a) {
     copy__(a.m_data, a.length());
   }
-  template <typename A> typename MatchArray<A>::T copy(A &&a_) {
+  template <typename A> MatchArray<A> copy(A &&a_) {
     ZuArrayT<A> a{a_};
     copy__(a.data(), a.length());
   }
 
   template <typename S>
-  typename MatchAnyString<S>::T copy(S &&s) { ctor(ZuFwd<S>(s)); }
+  MatchAnyString<S> copy(S &&s) { ctor(ZuFwd<S>(s)); }
   template <typename S>
-  typename MatchChar2String<S>::T copy(S &&s) { ctor(ZuFwd<S>(s)); }
+  MatchChar2String<S> copy(S &&s) { ctor(ZuFwd<S>(s)); }
   template <typename C>
-  typename MatchChar2<C>::T copy(C c) { ctor(c); }
+  MatchChar2<C> copy(C c) { ctor(c); }
   template <typename R>
-  typename MatchElem<R>::T copy(R &&r) { ctor(ZuFwd<R>(r)); }
+  MatchElem<R> copy(R &&r) { ctor(ZuFwd<R>(r)); }
 
 public:
   ZtArray &operator =(const ZtArray &a)
@@ -460,19 +460,19 @@ public:
   }
 
 private:
-  template <typename A> typename MatchZtArray<A>::T assign(A &&a) {
+  template <typename A> MatchZtArray<A> assign(A &&a) {
     Fwd_ZtArray<A>::assign_(this, ZuFwd<A>(a));
   }
-  template <typename A> typename MatchArray<A>::T assign(A &&a) {
+  template <typename A> MatchArray<A> assign(A &&a) {
     Fwd_Array<A>::assign_(this, ZuFwd<A>(a));
   }
 
-  template <typename S> typename MatchStrLiteral<S>::T assign(S &&s_) {
+  template <typename S> MatchStrLiteral<S> assign(S &&s_) {
     ZuArray<const T> s(s_);
     free_();
     shadow_(s.data(), s.length());
   }
-  template <typename S> typename MatchString<S>::T assign(S &&s_) {
+  template <typename S> MatchString<S> assign(S &&s_) {
     ZuArray<const T> s(s_);
     uint32_t oldLength = 0;
     T *oldData = free_1(oldLength);
@@ -480,14 +480,14 @@ private:
     free_2(oldData, oldLength);
   }
 
-  template <typename S> typename MatchChar2String<S>::T assign(S &&s_) {
+  template <typename S> MatchChar2String<S> assign(S &&s_) {
     ZuArray<const Char2> s(s_);
     unsigned o = ZuUTF<Char, Char2>::len(s);
     if (!o) { null(); return; }
     if (!owned() || size() < o) size(o);
     length_(ZuUTF<Char, Char2>::cvt(ZuArray<Char>(m_data, o), s));
   }
-  template <typename C> typename MatchChar2<C>::T assign(C c) {
+  template <typename C> MatchChar2<C> assign(C c) {
     ZuArray<const Char2> s{&c, 1};
     unsigned o = ZuUTF<Char, Char2>::len(s);
     if (!o) { null(); return; }
@@ -496,22 +496,22 @@ private:
   }
 
   template <typename P>
-  typename MatchPDelegate<P>::T assign(const P &p) {
+  MatchPDelegate<P> assign(const P &p) {
     ZuPrint<P>::print(*this, p);
   }
   template <typename P>
-  typename MatchPBuffer<P>::T assign(const P &p) {
+  MatchPBuffer<P> assign(const P &p) {
     unsigned o = ZuPrint<P>::length(p);
     if (!o) { null(); return; }
     if (!owned() || size() < o) size(o);
     length_(ZuPrint<P>::print(reinterpret_cast<char *>(m_data), o, p));
   }
 
-  template <typename V> typename MatchReal<V>::T assign(V v) {
+  template <typename V> MatchReal<V> assign(V v) {
     assign(ZuBoxed(v));
   }
 
-  template <typename I> typename MatchElem<I>::T assign(I &&i) {
+  template <typename I> MatchElem<I> assign(I &&i) {
     free_();
     ctor(ZuFwd<I>(i));
   }
@@ -521,13 +521,13 @@ public:
     { shadow(ZuFwd<A>(a)); return *this; }
 
 private:
-  template <typename A> typename MatchZtArray<A>::T shadow(const A &a) {
+  template <typename A> MatchZtArray<A> shadow(const A &a) {
     if (this == &a) return;
     free_();
     shadow_(a.m_data, a.length());
   }
   template <typename A>
-  typename MatchSameArray<A>::T shadow(A &&a_) {
+  MatchSameArray<A> shadow(A &&a_) {
     ZuArrayT<A> a(a_);
     free_();
     shadow_(a.data(), a.length());
@@ -535,7 +535,7 @@ private:
 
 public:
   template <typename S>
-  ZtArray(S &&s_, ZtIconv *iconv, typename ZuIsString<S>::T *_ = 0) {
+  ZtArray(S &&s_, ZtIconv *iconv, ZuIsString<S> *_ = 0) {
     ZuArrayT<S> s(s_);
     convert_(s, iconv);
   }
@@ -882,22 +882,22 @@ public:
   bool operator !() const { return !length(); }
 
   template <typename A>
-  typename MatchZtArray<A, int>::T cmp(const A &a) const {
+  MatchZtArray<A, int> cmp(const A &a) const {
     if (this == &a) return 0;
     return cmp(a.m_data, a.length());
   }
   template <typename A>
-  typename MatchArray<A, int>::T cmp(A &&a_) const {
+  MatchArray<A, int> cmp(A &&a_) const {
     ZuArrayT<A> a(ZuFwd<A>(a_));
     return cmp(a.data(), a.length());
   }
   template <typename S>
-  typename MatchAnyString<S, int>::T cmp(S &&s_) const {
+  MatchAnyString<S, int> cmp(S &&s_) const {
     ZuArrayT<S> s(ZuFwd<S>(s_));
     return cmp(s.data(), s.length());
   }
   template <typename S>
-  typename MatchChar2String<S, int>::T cmp(const S &s) const {
+  MatchChar2String<S, int> cmp(const S &s) const {
     return cmp(ZtArray{s});
   }
 
@@ -910,22 +910,22 @@ public:
   }
 
   template <typename A>
-  typename MatchZtArray<A, bool>::T less(const A &a) const {
+  MatchZtArray<A, bool> less(const A &a) const {
     if (this == &a) return true;
     return less(a.m_data, a.length());
   }
   template <typename A>
-  typename MatchArray<A, bool>::T less(A &&a_) const {
+  MatchArray<A, bool> less(A &&a_) const {
     ZuArrayT<A> a(ZuFwd<A>(a_));
     return less(a.data(), a.length());
   }
   template <typename S>
-  typename MatchAnyString<S, bool>::T less(S &&s_) const {
+  MatchAnyString<S, bool> less(S &&s_) const {
     ZuArrayT<S> s(ZuFwd<S>(s_));
     return less(s.data(), s.length());
   }
   template <typename S>
-  typename MatchChar2String<S, bool>::T less(const S &s) const {
+  MatchChar2String<S, bool> less(const S &s) const {
     return less(ZtArray{s});
   }
 
@@ -938,22 +938,22 @@ public:
   }
 
   template <typename A>
-  typename MatchZtArray<A, bool>::T greater(const A &a) const {
+  MatchZtArray<A, bool> greater(const A &a) const {
     if (this == &a) return true;
     return greater(a.m_data, a.length());
   }
   template <typename A>
-  typename MatchArray<A, bool>::T greater(A &&a_) const {
+  MatchArray<A, bool> greater(A &&a_) const {
     ZuArrayT<A> a(ZuFwd<A>(a_));
     return greater(a.data(), a.length());
   }
   template <typename S>
-  typename MatchAnyString<S, bool>::T greater(S &&s_) const {
+  MatchAnyString<S, bool> greater(S &&s_) const {
     ZuArrayT<S> s(ZuFwd<S>(s_));
     return greater(s.data(), s.length());
   }
   template <typename S>
-  typename MatchChar2String<S, bool>::T greater(const S &s) const {
+  MatchChar2String<S, bool> greater(const S &s) const {
     return greater(ZtArray{s});
   }
 
@@ -966,22 +966,22 @@ public:
   }
 
   template <typename A>
-  typename MatchZtArray<A, bool>::T equals(const A &a) const {
+  MatchZtArray<A, bool> equals(const A &a) const {
     if (this == &a) return true;
     return equals(a.m_data, a.length());
   }
   template <typename A>
-  typename MatchArray<A, bool>::T equals(A &&a_) const {
+  MatchArray<A, bool> equals(A &&a_) const {
     ZuArrayT<A> a(ZuFwd<A>(a_));
     return equals(a.data(), a.length());
   }
   template <typename S>
-  typename MatchAnyString<S, bool>::T equals(S &&s_) const {
+  MatchAnyString<S, bool> equals(S &&s_) const {
     ZuArrayT<S> s(ZuFwd<S>(s_));
     return equals(reinterpret_cast<const T *>(s.data()), s.length());
   }
   template <typename S>
-  typename MatchChar2String<S, bool>::T equals(const S &s) const {
+  MatchChar2String<S, bool> equals(const S &s) const {
     return equals(ZtArray{s});
   }
 
@@ -1012,33 +1012,33 @@ public:
 
 private:
   template <typename A>
-  typename MatchZtArray<A, ZtArray<T, Cmp> >::T add(A &&a) const {
+  MatchZtArray<A, ZtArray<T, Cmp>> add(A &&a) const {
     return Fwd_ZtArray<A>::add_(this, ZuFwd<A>(a));
   }
   template <typename A>
-  typename MatchArray<A, ZtArray<T, Cmp> >::T add(A &&a) const {
+  MatchArray<A, ZtArray<T, Cmp>> add(A &&a) const {
     return Fwd_Array<A>::add_(this, ZuFwd<A>(a));
   }
 
   template <typename S>
-  typename MatchAnyString<S, ZtArray<T, Cmp> >::T add(S &&s_) const
+  MatchAnyString<S, ZtArray<T, Cmp>> add(S &&s_) const
     { ZuArrayT<S> s(ZuFwd<S>(s_)); return add(s.data(), s.length()); }
   template <typename S>
-  typename MatchChar2String<S, ZtArray<T, Cmp> >::T add(S &&s) const
+  MatchChar2String<S, ZtArray<T, Cmp>> add(S &&s) const
     { return add(ZtArray{ZuFwd<S>(s)}); }
   template <typename C>
-  typename MatchChar2<C, ZtArray<T, Cmp> >::T add(C c) const
+  MatchChar2<C, ZtArray<T, Cmp>> add(C c) const
     { return add(ZtArray(c)); }
 
   template <typename P>
-  typename MatchPDelegate<P, ZtArray<T, Cmp> >::T add(P &&p) const
+  MatchPDelegate<P, ZtArray<T, Cmp>> add(P &&p) const
     { return add(ZtArray(ZuFwd<P>(p))); }
   template <typename P>
-  typename MatchPBuffer<P, ZtArray<T, Cmp> >::T add(P &&p) const
+  MatchPBuffer<P, ZtArray<T, Cmp>> add(P &&p) const
     { return add(ZtArray(ZuFwd<P>(p))); }
 
   template <typename R>
-  typename MatchElem<R, ZtArray<T, Cmp> >::T add(R &&r) const {
+  MatchElem<R, ZtArray<T, Cmp>> add(R &&r) const {
     unsigned n = length();
     unsigned z = grow_(n, n + 1);
     T *newData = (T *)::malloc(z * sizeof(T));
@@ -1077,43 +1077,43 @@ public:
 
 private:
   template <typename A>
-  typename MatchZtArray<A>::T append_(A &&a) {
+  MatchZtArray<A> append_(A &&a) {
     Fwd_ZtArray<A>::splice_(this, 0, length(), 0, ZuFwd<A>(a));
   }
   template <typename A>
-  typename MatchArray<A>::T append_(A &&a) {
+  MatchArray<A> append_(A &&a) {
     Fwd_Array<A>::splice_(this, 0, length(), 0, ZuFwd<A>(a));
   }
 
-  template <typename S> typename MatchAnyString<S>::T append_(S &&s_) {
+  template <typename S> MatchAnyString<S> append_(S &&s_) {
     ZuArrayT<S> s(ZuFwd<S>(s_));
     splice_cp_(0, length(), 0, s.data(), s.length());
   }
 
   template <typename S>
-  typename MatchChar2String<S>::T append_(S &&s)
+  MatchChar2String<S> append_(S &&s)
     { append_(ZtArray{ZuFwd<S>(s)}); }
   template <typename C>
-  typename MatchChar2<C>::T append_(C c)
+  MatchChar2<C> append_(C c)
     { append_(ZtArray(c)); }
 
   template <typename P>
-  typename MatchPDelegate<P>::T append_(const P &p) {
+  MatchPDelegate<P> append_(const P &p) {
     ZuPrint<P>::print(*this, p);
   }
   template <typename P>
-  typename MatchPBuffer<P>::T append_(const P &p) {
+  MatchPBuffer<P> append_(const P &p) {
     unsigned n = length();
     unsigned o = ZuPrint<P>::length(p);
     if (!owned() || size() < n + o) size(n + o);
     length(n + ZuPrint<P>::print(reinterpret_cast<char *>(m_data) + n, o, p));
   }
 
-  template <typename V> typename MatchReal<V>::T append_(V v) {
+  template <typename V> MatchReal<V> append_(V v) {
     append_(ZuBoxed(v));
   }
 
-  template <typename I> typename MatchElem<I>::T append_(I &&i) {
+  template <typename I> MatchElem<I> append_(I &&i) {
     this->initItem(push(), ZuFwd<I>(i));
   }
 
@@ -1149,36 +1149,36 @@ public:
 
 private:
   template <typename A>
-  typename MatchZtArray<A>::T splice_(
+  MatchZtArray<A> splice_(
       ZtArray *removed, int offset, int length, A &&a) {
     Fwd_ZtArray<A>::splice_(this, removed, offset, length, ZuFwd<A>(a));
   }
   template <typename A>
-  typename MatchArray<A>::T splice_(
+  MatchArray<A> splice_(
       ZtArray *removed, int offset, int length, A &&a) {
     Fwd_Array<A>::splice_(this, removed, offset, length, ZuFwd<A>(a));
   }
 
   template <typename S>
-  typename MatchAnyString<S>::T splice_(
+  MatchAnyString<S> splice_(
       ZtArray *removed, int offset, int length, const S &s_) {
     ZuArrayT<S> s(s_);
     splice_cp_(removed, offset, length, s.data(), s.length());
   }
 
   template <typename S>
-  typename MatchChar2String<S>::T splice_(
+  MatchChar2String<S> splice_(
       ZtArray *removed, int offset, int length, const S &s) {
     splice_(removed, offset, length, ZtArray(s));
   }
   template <typename C>
-  typename MatchChar2<C>::T splice_(
+  MatchChar2<C> splice_(
       ZtArray *removed, int offset, int length, C c) {
     splice_(removed, offset, length, ZtArray(c));
   }
 
   template <typename R>
-  typename MatchElem<R>::T splice_(
+  MatchElem<R> splice_(
       ZtArray *removed, int offset, int length, R &&r_) {
     T r{ZuFwd<R>(r_)};
     splice_mv_(removed, offset, length, &r, 1);
@@ -1260,9 +1260,9 @@ public:
     return v;
   }
 
-  template <typename A> typename MatchZtArray<A>::T unshift(A &&a)
+  template <typename A> MatchZtArray<A> unshift(A &&a)
     { Fwd_ZtArray<A>::splice_(this, nullptr, 0, 0, ZuFwd<A>(a)); }
-  template <typename A> typename MatchArray<A>::T unshift(A &&a)
+  template <typename A> MatchArray<A> unshift(A &&a)
     { Fwd_Array<A>::splice_(this, nullptr, 0, 0, ZuFwd<A>(a)); }
 
   void *unshift() {
@@ -1514,7 +1514,7 @@ public:
       IsWString = ZuConversion<wchar_t, T>::Same
     };
     template <typename U = ZtArray>
-    static typename ZuNotConst<U, T *>::T data(U &a) { return a.data(); }
+    static ZuNotConst<U, T *> data(U &a) { return a.data(); }
     static const T *data(const ZtArray &a) { return a.data(); }
     static unsigned length(const ZtArray &a) { return a.length(); }
   };
@@ -1539,6 +1539,6 @@ inline void ZtArray<T, Cmp>::convert_(const S &s, ZtIconv *iconv) {
 
 // generic printing
 template <class Cmp>
-struct ZuPrint<ZtArray<char, Cmp> > : public ZuPrintString { };
+struct ZuPrint<ZtArray<char, Cmp>> : public ZuPrintString { };
 
 #endif /* ZtArray_HPP */

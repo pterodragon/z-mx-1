@@ -132,9 +132,9 @@ public:
   }
 
   template <typename S>
-  typename ZuIfT<
+  ZuIfT<
     ZuConversion<ZtString, S>::Is ||
-    ZuConversion<ZtArray<char>, S>::Is, unsigned>::T
+    ZuConversion<ZtArray<char>, S>::Is, unsigned>
   s(S &s, ZuString r, unsigned offset = 0, int options = 0) const {
     ZtArray<unsigned> ovector;
     unsigned i = exec(s, offset, options, ovector);
@@ -143,9 +143,9 @@ public:
   }
 
   template <typename S>
-  typename ZuIfT<
+  ZuIfT<
     ZuConversion<ZtString, S>::Is ||
-    ZuConversion<ZtArray<char>, S>::Is, unsigned>::T
+    ZuConversion<ZtArray<char>, S>::Is, unsigned>
   sg(S &s, ZuString r, unsigned offset = 0, int options = 0) const {
     ZtArray<unsigned> ovector;
     unsigned n = 0;

@@ -67,7 +67,7 @@ template <class Lock> class ZmHash_LockMgr {
 
   ZuAssert(sizeof(Lock) <= CacheLineSize);
 
-  ZuInline Lock &lock_(unsigned i) const {
+  Lock &lock_(unsigned i) const {
     return *(Lock *)((char *)m_locks + (i * CacheLineSize));
   }
 
@@ -99,13 +99,13 @@ protected:
 
 
 public:
-  ZuInline unsigned cBits() const { return m_cBits; }
+  unsigned cBits() const { return m_cBits; }
 
 protected:
-  ZuInline Lock &lockCode(uint32_t code) const {
+  Lock &lockCode(uint32_t code) const {
     return lockSlot(ZmHash_Bits::hashBits(code, m_bits));
   }
-  ZuInline Lock &lockSlot(int slot) const {
+  Lock &lockSlot(int slot) const {
     return lock_(slot>>(m_bits - m_cBits));
   }
 
@@ -142,22 +142,22 @@ protected:
   ~ZmHash_LockMgr() { }
 
 public:
-  ZuInline unsigned bits() const { return m_bits; }
-  ZuInline static constexpr unsigned cBits() { return 0; }
+  unsigned bits() const { return m_bits; }
+  static constexpr unsigned cBits() { return 0; }
 
 protected:
-  ZuInline void bits(unsigned u) { m_bits = u; }
+  void bits(unsigned u) { m_bits = u; }
 
-  ZuInline ZmNoLock &lockCode(uint32_t code) const {
+  ZmNoLock &lockCode(uint32_t code) const {
     return const_cast<ZmNoLock &>(m_noLock);
   }
-  ZuInline ZmNoLock &lockSlot(int slot) const {
+  ZmNoLock &lockSlot(int slot) const {
     return const_cast<ZmNoLock &>(m_noLock);
   }
 
-  ZuInline int lockAllResize(unsigned bits) { return 0; }
-  ZuInline void lockAll() { }
-  ZuInline void unlockAll() { }
+  int lockAllResize(unsigned bits) { return 0; }
+  void lockAll() { }
+  void unlockAll() { }
 
 protected:
   unsigned	m_bits;
@@ -348,7 +348,7 @@ private:
   using LockMgr::m_bits;
 
 public:
-  ZuInline unsigned bits() const { return m_bits; }
+  unsigned bits() const { return m_bits; }
   using LockMgr::cBits;
 
 protected:
@@ -365,7 +365,7 @@ public:
 	ZuConversion<ZuNull, Object>::Is ||
 	ZuConversion<ZuShadow, Object>::Is ||
 	(NodeIsKey && ZuConversion<Object, Key>::Is) ||
-	(NodeIsVal && ZuConversion<Object, Val>::Is)>::T,
+	(NodeIsVal && ZuConversion<Object, Val>::Is)>,
       public Heap {
     NodeFn(const NodeFn &);
     NodeFn &operator =(const NodeFn &);	// prevent mis-use
@@ -374,16 +374,16 @@ public:
   template <typename> friend class ZmHash<Key, NTP>::Iterator_;
 
   protected:
-    ZuInline NodeFn() { }
+    NodeFn() { }
 
   private:
-    ZuInline void init() { m_next = 0; }
+    void init() { m_next = 0; }
 
     // access to these methods is always guarded, so no need to protect
     // the returned object against concurrent deletion; these are private
-    ZuInline Node *next() const { return m_next; }
+    Node *next() const { return m_next; }
 
-    ZuInline void next(Node *n) { m_next = n; }
+    void next(Node *n) { m_next = n; }
 
     Node		*m_next;
   };
@@ -428,17 +428,17 @@ protected:
     Iterator_(Iterator_ &&) = default;
     Iterator_ &operator =(Iterator_ &&) = default;
 
-    ZuInline Iterator_(Hash &hash) : m_hash(hash) { }
+    Iterator_(Hash &hash) : m_hash(hash) { }
 
   public:
-    ZuInline void reset() {
+    void reset() {
       m_hash.startIterate(static_cast<I &>(*this));
     }
-    ZuInline Node *iterate() {
+    Node *iterate() {
       return m_hash.iterate(static_cast<I &>(*this));
     }
 
-    ZuInline unsigned count() const { return m_hash.count_(); }
+    unsigned count() const { return m_hash.count_(); }
 
   protected:
     Hash			&m_hash;
@@ -461,14 +461,14 @@ protected:
     IndexIterator_ &operator =(IndexIterator_ &&) = default;
 
     template <typename Index_>
-    ZuInline IndexIterator_(Hash &hash, Index_ &&index) :
+    IndexIterator_(Hash &hash, Index_ &&index) :
 	Iterator_<I>(hash), m_index(ZuFwd<Index_>(index)) { }
 
   public:
-    ZuInline void reset() {
+    void reset() {
       m_hash.startIndexIterate(static_cast<I &>(*this));
     }
-    ZuInline Node *iterate() {
+    Node *iterate() {
       return m_hash.indexIterate(static_cast<I &>(*this));
     }
 
@@ -509,17 +509,17 @@ public:
 
     using Base::m_hash;
 
-    ZuInline void lock(Lock &l) { LockTraits::readlock(l); }
-    ZuInline void unlock(Lock &l) { LockTraits::readunlock(l); }
+    void lock(Lock &l) { LockTraits::readlock(l); }
+    void unlock(Lock &l) { LockTraits::readunlock(l); }
 
   public:
     ReadIterator(ReadIterator &&) = default;
     ReadIterator &operator =(ReadIterator &&) = default;
 
-    ZuInline ReadIterator(const Hash &hash) : Base(const_cast<Hash &>(hash)) {
+    ReadIterator(const Hash &hash) : Base(const_cast<Hash &>(hash)) {
       const_cast<Hash &>(hash).startIterate(*this);
     }
-    ZuInline ~ReadIterator() { m_hash.endIterate(*this); }
+    ~ReadIterator() { m_hash.endIterate(*this); }
   };
 
   class IndexIterator : public IndexIterator_<IndexIterator> {
@@ -532,20 +532,20 @@ public:
 
     using Base::m_hash;
 
-    ZuInline void lock(Lock &l) { LockTraits::lock(l); }
-    ZuInline void unlock(Lock &l) { LockTraits::unlock(l); }
+    void lock(Lock &l) { LockTraits::lock(l); }
+    void unlock(Lock &l) { LockTraits::unlock(l); }
 
   public:
     IndexIterator(IndexIterator &&) = default;
     IndexIterator &operator =(IndexIterator &&) = default;
 
     template <typename Index_>
-    ZuInline IndexIterator(Hash &hash, Index_ &&index) :
+    IndexIterator(Hash &hash, Index_ &&index) :
 	Base(hash, ZuFwd<Index_>(index)) {
       hash.startIndexIterate(*this);
     }
-    ZuInline ~IndexIterator() { m_hash.endIterate(*this); }
-    ZuInline void del() { m_hash.delIterate(*this); }
+    ~IndexIterator() { m_hash.endIterate(*this); }
+    void del() { m_hash.delIterate(*this); }
   };
 
   class ReadIndexIterator : public IndexIterator_<ReadIndexIterator> {
@@ -558,19 +558,19 @@ public:
 
     using Base::m_hash;
 
-    ZuInline void lock(Lock &l) { LockTraits::readlock(l); }
-    ZuInline void unlock(Lock &l) { LockTraits::readunlock(l); }
+    void lock(Lock &l) { LockTraits::readlock(l); }
+    void unlock(Lock &l) { LockTraits::readunlock(l); }
 
   public:
     ReadIndexIterator(ReadIndexIterator &&) = default;
     ReadIndexIterator &operator =(ReadIndexIterator &&) = default;
 
     template <typename Index_>
-    ZuInline ReadIndexIterator(const Hash &hash, Index_ &&index) :
+    ReadIndexIterator(const Hash &hash, Index_ &&index) :
 	Base(const_cast<Hash &>(hash), ZuFwd<Index_>(index)) {
       const_cast<Hash &>(hash).startIndexIterate(*this);
     }
-    ZuInline ~ReadIndexIterator() { m_hash.endIterate(*this); }
+    ~ReadIndexIterator() { m_hash.endIterate(*this); }
   };
 
 private:
@@ -599,17 +599,17 @@ public:
     delete [] m_table;
   }
 
-  ZuInline unsigned loadFactor_() const { return m_loadFactor; }
-  ZuInline double loadFactor() const { return (double)m_loadFactor / 16.0; }
-  ZuInline unsigned size() const {
+  unsigned loadFactor_() const { return m_loadFactor; }
+  double loadFactor() const { return (double)m_loadFactor / 16.0; }
+  unsigned size() const {
     return (double)(((uint64_t)1)<<m_bits) * loadFactor();
   }
 
-  ZuInline unsigned count_() const { return m_count.load_(); }
+  unsigned count_() const { return m_count.load_(); }
 
   template <typename Key__>
-  typename ZuNotConvertible<
-	typename ZuDeref<Key__>::T, NodeRef, NodeRef>::T
+  ZuNotConvertible<
+	ZuDeref<Key__>, NodeRef, NodeRef>
       add(Key__ &&key) {
     NodeRef node = new Node(ZuFwd<Key__>(key));
     this->add(node);
@@ -622,7 +622,7 @@ public:
     return node;
   }
   template <typename NodeRef_>
-  typename ZuConvertible<NodeRef_, NodeRef>::T
+  ZuConvertible<NodeRef_, NodeRef>
       add(const NodeRef_ &node_) {
     const NodeRef &node = node_;
     uint32_t code = HashFn::hash(node->Node::key());
@@ -810,7 +810,7 @@ private:
 
 public:
   template <typename Index__>
-  typename ZuNotConvertible<Index__, Node *, NodeRef>::T
+  ZuNotConvertible<Index__, Node *, NodeRef>
       del(const Index__ &index) {
     uint32_t code = IHashFn::hash(index);
     Guard guard(lockCode(code));

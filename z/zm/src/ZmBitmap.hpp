@@ -44,11 +44,11 @@ class ZmBitmap;
 
 class ZmBitmap {
 public:
-  ZuInline ZmBitmap() : m_map(0) { }
-  ZuInline ZmBitmap(const ZmBitmap &b) :
+  ZmBitmap() : m_map(0) { }
+  ZmBitmap(const ZmBitmap &b) :
     m_map(b.m_map ? hwloc_bitmap_dup(b.m_map) : (hwloc_bitmap_t)nullptr) { }
-  ZuInline ZmBitmap(ZmBitmap &&b) : m_map(b.m_map) { b.m_map = 0; }
-  ZuInline ZmBitmap &operator =(const ZmBitmap &b) {
+  ZmBitmap(ZmBitmap &&b) : m_map(b.m_map) { b.m_map = 0; }
+  ZmBitmap &operator =(const ZmBitmap &b) {
     if (this == &b) return *this;
     if (!b.m_map) {
       if (m_map) hwloc_bitmap_free(m_map);
@@ -59,7 +59,7 @@ public:
     hwloc_bitmap_copy(m_map, b.m_map);
     return *this;
   }
-  ZuInline ZmBitmap &operator =(ZmBitmap &&b) {
+  ZmBitmap &operator =(ZmBitmap &&b) {
     m_map = b.m_map;
     b.m_map = 0;
     return *this;
@@ -67,7 +67,7 @@ public:
   ~ZmBitmap() { if (m_map) hwloc_bitmap_free(m_map); }
 
 private:
-  ZuInline void lazy() const {
+  void lazy() const {
     if (ZuUnlikely(!m_map))
       const_cast<ZmBitmap *>(this)->m_map = hwloc_bitmap_alloc();
   }
@@ -100,13 +100,13 @@ public:
     return *this;
   }
   template <typename T>
-  typename ZuSame<Range, T, ZmBitmap &>::T set(const T &v) {
+  ZuSame<Range, T, ZmBitmap &> set(const T &v) {
     lazy();
     hwloc_bitmap_set_range(m_map, v.p1(), v.p2());
     return *this;
   }
   template <typename T>
-  typename ZuSame<Range, T, ZmBitmap &>::T clr(const T &v) {
+  ZuSame<Range, T, ZmBitmap &> clr(const T &v) {
     lazy();
     hwloc_bitmap_clr_range(m_map, v.p1(), v.p2());
     return *this;
@@ -238,10 +238,10 @@ public:
       ((uint128_t)hwloc_bitmap_to_ith_ulong(m_map, 1) << 64U);
   }
   template <typename S>
-  ZmBitmap(const S &s, typename ZuIsCharString<S>::T *_ = 0) :
+  ZmBitmap(const S &s, ZuIsCharString<S> *_ = 0) :
       m_map(hwloc_bitmap_alloc()) { scan(s); }
   template <typename S>
-  typename ZuIsCharString<S, ZmBitmap &>::T operator =(const S &s) {
+  ZuIsCharString<S, ZmBitmap &> operator =(const S &s) {
     if (m_map) hwloc_bitmap_zero(m_map);
     scan(s);
     return *this;

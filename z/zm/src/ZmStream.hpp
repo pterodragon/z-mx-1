@@ -99,44 +99,35 @@ public:
   }
 
 private:
-  template <typename U, typename R = void,
-    bool B = ZuConversion<U, char>::Same> struct MatchChar;
-  template <typename U, typename R>
-  struct MatchChar<U, R, true> { using T = R; };
+  template <typename U, typename R = void>
+  using MatchChar = ZuIfT<ZuConversion<U, char>::Same, R>;
 
-  template <typename U, typename R = void,
-    bool B = ZuTraits<U>::IsPrimitive &&
-	     ZuTraits<U>::IsReal &&
-	     !ZuConversion<U, char>::Same
-    > struct MatchReal;
-  template <typename U, typename R>
-  struct MatchReal<U, R, true> { using T = R; };
+  template <typename U, typename R = void>
+  using MatchReal = ZuIfT<
+    ZuTraits<U>::IsPrimitive &&
+    ZuTraits<U>::IsReal &&
+    !ZuConversion<U, char>::Same, R>;
 
-  template <typename U, typename R = void,
-    bool S = ZuTraits<U>::IsString &&
-	     !ZuTraits<U>::IsWString &&
-	     !ZuConversion<ZuString, U>::Is> struct MatchString;
-  template <typename U, typename R>
-  struct MatchString<U, R, true> { using T = R; };
+  template <typename U, typename R = void>
+  using MatchString = ZuIfT<
+    ZuTraits<U>::IsString &&
+    !ZuTraits<U>::IsWString &&
+    !ZuConversion<ZuString, U>::Is, R>;
 
-  template <typename U, typename R = void,
-    bool B = ZuPrint<U>::Delegate> struct MatchPDelegate;
-  template <typename U, typename R>
-  struct MatchPDelegate<U, R, true> { using T = R; };
+  template <typename U, typename R = void>
+  using MatchPDelegate = ZuIfT<ZuPrint<U>::Delegate, R>;
 
-  template <typename U, typename R = void,
-    bool B = ZuPrint<U>::Buffer> struct MatchPBuffer;
-  template <typename U, typename R>
-  struct MatchPBuffer<U, R, true> { using T = R; };
+  template <typename U, typename R = void>
+  using MatchPBuffer = ZuIfT<ZuPrint<U>::Buffer, R>;
 
 public:
   template <typename C>
-  typename MatchChar<C, ZmStream &>::T operator <<(C c) {
+  MatchChar<C, ZmStream &> operator <<(C c) {
     m_strFn(ZuString(&c, 1));
     return *this;
   }
   template <typename R>
-  typename MatchReal<R, ZmStream &>::T operator <<(const R &r) {
+  MatchReal<R, ZmStream &> operator <<(const R &r) {
     m_bufFn(ZmStreamBuf(ZuBoxed(r)));
     return *this;
   }
@@ -145,17 +136,17 @@ public:
     return *this;
   }
   template <typename S>
-  typename MatchString<S, ZmStream &>::T operator <<(S &&s_) {
+  MatchString<S, ZmStream &> operator <<(S &&s_) {
     m_strFn(ZuString(ZuFwd<S>(s_)));
     return *this;
   }
   template <typename P>
-  typename MatchPDelegate<P, ZmStream &>::T operator <<(const P &p) {
+  MatchPDelegate<P, ZmStream &> operator <<(const P &p) {
     ZuPrint<P>::print(*this, p);
     return *this;
   }
   template <typename P>
-  typename MatchPBuffer<P, ZmStream &>::T operator <<(const P &p) {
+  MatchPBuffer<P, ZmStream &> operator <<(const P &p) {
     m_bufFn(ZmStreamBuf(p));
     return *this;
   }

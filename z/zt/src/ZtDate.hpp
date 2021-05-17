@@ -306,11 +306,11 @@ public:
   // ZmTime
 
   template <typename T>
-  ZtDate(const T &t, typename ZuSame<ZmTime, T>::T *_ = 0) {
+  ZtDate(const T &t, ZuSame<ZmTime, T> *_ = 0) {
     init(t.sec()), m_nsec = t.nsec();
   }
   template <typename T>
-  typename ZuSame<ZmTime, T, ZtDate &>::T operator =(const T &t) {
+  ZuSame<ZmTime, T, ZtDate &> operator =(const T &t) {
     init(t.sec());
     m_nsec = t.nsec();
     return *this;
@@ -319,11 +319,11 @@ public:
   // time_t
 
   template <typename T>
-  ZtDate(const T &t, typename ZuSame<time_t, T>::T *_ = 0) {
+  ZtDate(const T &t, ZuSame<time_t, T> *_ = 0) {
     init(t), m_nsec = 0;
   }
   template <typename T>
-  typename ZuSame<time_t, T, ZtDate &>::T operator =(const T &t) {
+  ZuSame<time_t, T, ZtDate &> operator =(const T &t) {
     init(t);
     m_nsec = 0;
     return *this;
@@ -332,13 +332,13 @@ public:
   // double
 
   template <typename T>
-  ZtDate(T d, typename ZuSame<double, T>::T *_ = 0) {
+  ZtDate(T d, ZuSame<double, T> *_ = 0) {
     time_t t = (time_t)d;
     init(t);
     m_nsec = (int)((d - (double)t) * (double)1000000000);
   }
   template <typename T>
-  typename ZuSame<double, T, ZtDate &>::T operator =(T d) {
+  ZuSame<double, T, ZtDate &> operator =(T d) {
     time_t t = (time_t)d;
     init(t);
     m_nsec = (int)((d - (double)t) * (double)1000000000);
@@ -432,24 +432,24 @@ public:
   // FIX format: YYYYMMDD-HH:MM:SS.nnnnnnnnn
 
   template <typename S>
-  ZuInline ZtDate(FIX_ _, const S &s, typename ZuIsString<S>::T *__ = 0) {
+  ZuInline ZtDate(FIX_ _, const S &s, ZuIsString<S> *__ = 0) {
     ctorFIX(s);
   }
 
   // CSV format: YYYY/MM/DD HH:MM:SS with an optional timezone parameter
 
   template <typename S>
-  ZuInline ZtDate(CSV_ _, const S &s, typename ZuIsString<S>::T *__ = 0) {
+  ZuInline ZtDate(CSV_ _, const S &s, ZuIsString<S> *__ = 0) {
     ctorCSV(s, 0, 0);
   }
   template <typename S, typename TZ>
-  ZuInline ZtDate(CSV_ _, const S &s, const TZ &tz, typename ZuIfT<
-      ZuTraits<S>::IsString && ZuTraits<TZ>::IsCString>::T *__ = 0) {
+  ZuInline ZtDate(CSV_ _, const S &s, const TZ &tz, ZuIfT<
+      ZuTraits<S>::IsString && ZuTraits<TZ>::IsCString> *__ = 0) {
     ctorCSV(s, tz, 0);
   }
   template <typename S, typename TZ>
-  ZuInline ZtDate(CSV_ _, const S &s, const TZ &tzOffset, typename ZuIfT<
-      ZuTraits<S>::IsString && ZuConversion<int, TZ>::Same>::T *__ = 0) {
+  ZuInline ZtDate(CSV_ _, const S &s, const TZ &tzOffset, ZuIfT<
+      ZuTraits<S>::IsString && ZuConversion<int, TZ>::Same> *__ = 0) {
     ctorCSV(s, 0, tzOffset);
   }
 
@@ -460,12 +460,12 @@ public:
   // parameter passed in by the caller
 
   template <typename S>
-  ZuInline ZtDate(const S &s, typename ZuIsString<S>::T *_ = 0) {
+  ZuInline ZtDate(const S &s, ZuIsString<S> *_ = 0) {
     ctorISO(s, 0);
   }
   template <typename S, typename TZ>
-  ZuInline ZtDate(const S &s, const TZ &tz, typename ZuIfT<
-      ZuTraits<S>::IsString && ZuTraits<TZ>::IsCString>::T *_ = 0) {
+  ZuInline ZtDate(const S &s, const TZ &tz, ZuIfT<
+      ZuTraits<S>::IsString && ZuTraits<TZ>::IsCString> *_ = 0) {
     ctorISO(s, tz);
   }
 
@@ -883,7 +883,7 @@ public:
   }
 
   template <typename T>
-  ZuInline typename ZuSame<ZmTime, T, ZtDate>::T operator +(const T &t) const {
+  ZuInline ZuSame<ZmTime, T, ZtDate> operator +(const T &t) const {
     int julian, sec, nsec;
 
     sec = m_sec;
@@ -912,10 +912,10 @@ public:
 
     return ZtDate(Julian, julian, sec, nsec);
   }
-  template <typename T> typename ZuIfT<
+  template <typename T> ZuIfT<
     ZuConversion<time_t, T>::Same ||
     ZuConversion<long, T>::Same ||
-    ZuConversion<int, T>::Same, ZtDate>::T operator +(T sec_) const {
+    ZuConversion<int, T>::Same, ZtDate> operator +(T sec_) const {
     int julian, sec = sec_;
 
     if (sec < 0) {
@@ -939,7 +939,7 @@ public:
   }
 
   template <typename T>
-  typename ZuSame<ZmTime, T, ZtDate &>::T operator +=(const T &t) {
+  ZuSame<ZmTime, T, ZtDate &> operator +=(const T &t) {
     int julian, sec, nsec;
 
     sec = m_sec;
@@ -972,10 +972,10 @@ public:
 
     return *this;
   }
-  template <typename T> typename ZuIfT<
+  template <typename T> ZuIfT<
     ZuConversion<time_t, T>::Same ||
     ZuConversion<long, T>::Same ||
-    ZuConversion<int, T>::Same, ZtDate &>::T operator +=(T sec_) {
+    ZuConversion<int, T>::Same, ZtDate &> operator +=(T sec_) {
     int julian, sec = sec_;
 
     if (sec < 0) {
@@ -1002,23 +1002,23 @@ public:
   }
 
   template <typename T>
-  ZuInline typename ZuSame<ZmTime, T, ZtDate>::T operator -(const T &t) const {
+  ZuInline ZuSame<ZmTime, T, ZtDate> operator -(const T &t) const {
     return ZtDate::operator +(-t);
   }
-  template <typename T> ZuInline typename ZuIfT<
+  template <typename T> ZuInline ZuIfT<
       ZuConversion<time_t, T>::Same ||
       ZuConversion<long, T>::Same ||
-      ZuConversion<int, T>::Same, ZtDate>::T operator -(T sec_) {
+      ZuConversion<int, T>::Same, ZtDate> operator -(T sec_) {
     return ZtDate::operator +(-sec_);
   }
   template <typename T>
-  ZuInline typename ZuSame<ZmTime, T, ZtDate &>::T operator -=(const T &t) {
+  ZuInline ZuSame<ZmTime, T, ZtDate &> operator -=(const T &t) {
     return ZtDate::operator +=(-t);
   }
-  template <typename T> ZuInline typename ZuIfT<
+  template <typename T> ZuInline ZuIfT<
     ZuConversion<time_t, T>::Same ||
     ZuConversion<long, T>::Same ||
-    ZuConversion<int, T>::Same, ZtDate &>::T operator -=(T sec_) {
+    ZuConversion<int, T>::Same, ZtDate &> operator -=(T sec_) {
     return ZtDate::operator +=(-sec_);
   }
 

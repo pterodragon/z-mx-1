@@ -77,12 +77,12 @@ struct ZuFixed {
 
   template <typename V>
   ZuFixed(V value_, unsigned exponent_,
-      typename ZuIsIntegral<V>::T *_ = 0) :
+      ZuIsIntegral<V> *_ = 0) :
     value{value_}, exponent{exponent_} { }
 
   template <typename V>
   ZuFixed(V value_, unsigned exponent_,
-      typename ZuIsFloatingPoint<V>::T *_ = 0) :
+      ZuIsFloatingPoint<V> *_ = 0) :
     value{static_cast<double>(value_) * ZuDecimalFn::pow10_64(exponent_)},
     exponent{exponent_} { }
 
@@ -111,7 +111,7 @@ struct ZuFixed {
   // scan from string
   template <typename S>
   ZuFixed(const S &s_, int exponent_ = -1,
-      typename ZuIsString<S>::T *_ = 0) {
+      ZuIsString<S> *_ = 0) {
     ZuString s(s_);
     if (ZuUnlikely(!s || exponent_ > 18)) goto null;
     {

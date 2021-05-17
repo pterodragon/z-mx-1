@@ -203,7 +203,7 @@ public:
     if (iter != end()) del_(iter);
   }
   template <typename T>
-  ZuInline typename ZuIs<T, Iter>::T del(T iter) {
+  ZuInline ZuIs<T, Iter> del(T iter) {
     if (iter != end()) del_(iter);
   }
 

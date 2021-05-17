@@ -57,11 +57,11 @@ public:
   ZuID &operator =(const ZuID &b) { m_val = b.m_val; return *this; }
 
   template <typename S>
-  ZuID(S &&s, typename ZuIsString<S>::T *_ = 0) {
+  ZuID(S &&s, ZuIsString<S> *_ = 0) {
     init(ZuFwd<S>(s));
   }
   template <typename S>
-  typename ZuIsString<S, ZuID &>::T operator =(S &&s) {
+  ZuIsString<S, ZuID &> operator =(S &&s) {
     init(ZuFwd<S>(s));
     return *this;
   }
@@ -70,12 +70,12 @@ public:
     enum { OK = !ZuTraits<V>::IsString && ZuConversion<V, uint64_t>::Exists };
   };
   template <typename V, typename R = void>
-  struct MatchUInt64 : public ZuIfT<IsUInt64<V>::OK, R> { };
+  using MatchUInt64 = ZuIfT<IsUInt64<V>::OK, R>;
 
   template <typename V>
-  ZuID(V v, typename MatchUInt64<V>::T *_ = 0) : m_val(v) { }
+  ZuID(V v, MatchUInt64<V> *_ = 0) : m_val(v) { }
   template <typename V>
-  typename MatchUInt64<V, ZuID &>::T operator =(V v) {
+  MatchUInt64<V, ZuID &> operator =(V v) {
     m_val = v;
     return *this;
   }

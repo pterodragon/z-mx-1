@@ -92,13 +92,13 @@ private:
   }
 
   template <bool Construct = Construct_>
-  typename ZuIfT<Construct>::T ctor() {
+  ZuIfT<Construct> ctor() {
     T *ptr = CtorFn();
     this->ref(ptr);
     m_instance = ptr;
   }
   template <bool Construct = Construct_>
-  typename ZuIfT<!Construct>::T ctor() { }
+  ZuIfT<!Construct> ctor() { }
 
 public:
   ZmSingleton() {
@@ -144,8 +144,8 @@ public:
 };
 
 template <typename L>
-inline auto &ZmStatic(L l, typename ZuIsLambdaFn<L>::T *_ = 0) {
-  using T = typename ZuDecay<decltype(*ZuLambdaFn<L>::invoke())>::T;
+inline auto &ZmStatic(L l, ZuIsLambdaFn<L> *_ = 0) {
+  using T = ZuDecay<decltype(*ZuLambdaFn<L>::invoke())>;
   return *(ZmSingleton<T, true, ZuLambdaFn<L>::fn()>::instance());
 }
 

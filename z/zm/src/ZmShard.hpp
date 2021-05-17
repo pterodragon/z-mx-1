@@ -148,14 +148,14 @@ private:
 
 public:
   template <typename L>
-  typename ZuNotMutable<L>::T invoke(L l) const {
+  ZuNotMutable<L> invoke(L l) const {
     Shard *shard;
     T *o;
     shardObject(shard, o);
     shard->invoke([l = ZuMv(l), shard, o]() { l(shard, o); });
   }
   template <typename L>
-  typename ZuIsMutable<L>::T invoke(L l) const {
+  ZuIsMutable<L> invoke(L l) const {
     Shard *shard;
     T *o;
     shardObject(shard, o);

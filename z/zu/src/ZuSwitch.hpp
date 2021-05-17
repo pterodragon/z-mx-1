@@ -31,9 +31,9 @@
 #endif
 
 // #include <ZuIfT.hpp>
-// template <unsigned I> typename ZuIfT<I == 0>::T foo() { puts("0"); }
-// template <unsigned I> typename ZuIfT<I == 1>::T foo() { puts("1"); }
-// template <unsigned I> typename ZuIfT<I == 2>::T foo() { puts("2"); }
+// template <unsigned I> ZuIfT<I == 0> foo() { puts("0"); }
+// template <unsigned I> ZuIfT<I == 1> foo() { puts("1"); }
+// template <unsigned I> ZuIfT<I == 2> foo() { puts("2"); }
 // unsigned i = ...;
 // ZuSwitch::dispatch<3>(i, [](auto i) { foo<i>(); });
 // ZuSwitch::dispatch<3>(

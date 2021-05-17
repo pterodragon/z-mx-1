@@ -51,49 +51,51 @@ public:
 
 private:
   // matches ZuRef<U> where U is not T, but is in the same type hierarchy as T
-  template <typename U> struct IsOtherRef2 {
+  template <typename U> struct IsOtherRef__ {
     enum { OK =
       (ZuConversion<T, typename U::T>::Base ||
        ZuConversion<typename U::T, T>::Base) };
   };
-  template <typename U, typename = void, bool = IsOtherRef2<U>::OK>
-  struct MatchOtherRef2 { };
+  template <typename U, typename = void, bool = IsOtherRef__<U>::OK>
+  struct MatchOtherRef__ { };
   template <typename U, typename R>
-  struct MatchOtherRef2<U, R, true> { using T = R; };
-  template <typename U> struct IsOtherRef1 {
+  struct MatchOtherRef__<U, R, true> { using T = R; };
+  template <typename U> struct IsOtherRef_ {
     enum { OK = ZuConversion<ZuRef_, U>::Base };
   };
-  template <typename U, typename = void, bool = IsOtherRef1<U>::OK>
-  struct MatchOtherRef;
+  template <typename U, typename = void, bool = IsOtherRef_<U>::OK>
+  struct MatchOtherRef_;
   template <typename U, typename R>
-  struct MatchOtherRef<U, R, true> : public MatchOtherRef2<U, R> { };
+  struct MatchOtherRef_<U, R, true> : public MatchOtherRef__<U, R> { };
+  template <typename U, typename R = void>
+  using MatchOtherRef = typename MatchOtherRef_<U, R>::T;
 
   // matches ZuRef<U> where U is either T or in the same type hierarchy as T
-  template <typename U> struct IsRef2 {
+  template <typename U> struct IsRef__ {
     enum { OK =
       (ZuConversion<T, typename U::T>::Is ||
        ZuConversion<typename U::T, T>::Is) };
   };
-  template <typename U, typename = void, bool = IsRef2<U>::OK>
-  struct MatchRef2 { };
+  template <typename U, typename = void, bool = IsRef__<U>::OK>
+  struct MatchRef__ { };
   template <typename U, typename R>
-  struct MatchRef2<U, R, true> { using T = R; };
-  template <typename U> struct IsRef1 {
+  struct MatchRef__<U, R, true> { using T = R; };
+  template <typename U> struct IsRef_ {
     enum { OK = ZuConversion<ZuRef_, U>::Base };
   };
-  template <typename U, typename = void, bool = IsRef1<U>::OK>
-  struct MatchRef;
+  template <typename U, typename = void, bool = IsRef_<U>::OK>
+  struct MatchRef_;
   template <typename U, typename R>
-  struct MatchRef<U, R, true> : public MatchRef2<U, R> { };
+  struct MatchRef_<U, R, true> : public MatchRef__<U, R> { };
+  template <typename U, typename R = void>
+  using MatchRef = typename MatchRef_<U, R>::T;
 
   // matches U * where U is either T or in the same type hierarchy as T
   template <typename U> struct IsPtr {
     enum { OK = (ZuConversion<T, U>::Is || ZuConversion<U, T>::Is) };
   };
-  template <typename U, typename = void, bool = IsPtr<U>::OK>
-  struct MatchPtr;
-  template <typename U, typename R>
-  struct MatchPtr<U, R, true> { using T = R; };
+  template <typename U, typename R = void>
+  using MatchPtr = ZuIfT<IsPtr<U>::OK, R>;
 
 public:
   ZuRef() : m_object(0) { }
@@ -104,9 +106,9 @@ public:
     r.m_object = 0;
   }
   template <typename R>
-  ZuRef(R &&r, typename MatchOtherRef<typename ZuDeref<R>::T>::T *_ = 0)
+  ZuRef(R &&r, MatchOtherRef<ZuDeref<R>> *_ = 0)
   noexcept : m_object(
-      static_cast<T *>(const_cast<typename ZuDeref<R>::T::T *>(r.m_object))) {
+      static_cast<T *>(const_cast<ZuDeref<R> *>(r.m_object))) {
     ZuMvCp<R>::mvcp(ZuFwd<R>(r),
 	[](auto &&r) { r.m_object = 0; },
 	[this](const auto &) { if (T *o = m_object) o->ref(); });
@@ -115,7 +117,7 @@ public:
     if (o) o->ref();
   }
   template <typename O>
-  ZuRef(O *o, typename MatchPtr<O>::T *_ = 0) :
+  ZuRef(O *o, MatchPtr<O> *_ = 0) :
       m_object(static_cast<T *>(o)) {
     if (o) o->ref();
   }
@@ -123,14 +125,14 @@ public:
     if (T *o = m_object) if (o->deref()) delete o;
   }
 
-  template <typename R> typename MatchRef<R>::T swap(R &r) noexcept {
+  template <typename R> MatchRef<R> swap(R &r) noexcept {
     T *o = m_object;
     m_object = static_cast<T *>(r.m_object);
     r.m_object = static_cast<typename R::T *>(o);
   }
 
   template <typename R>
-  friend typename MatchRef<R>::T swap(ZuRef &r1, R &r2) noexcept {
+  friend MatchRef<R> swap(ZuRef &r1, R &r2) noexcept {
     r1.swap(r2);
   }
 
@@ -139,13 +141,13 @@ public:
     return *this;
   }
   template <typename R>
-  typename MatchOtherRef<R, ZuRef &>::T operator =(R r) noexcept {
+  MatchOtherRef<R, ZuRef &> operator =(R r) noexcept {
     swap(r);
     return *this;
   }
 
   template <typename O>
-  typename MatchPtr<O, ZuRef &>::T operator =(O *n) {
+  MatchPtr<O, ZuRef &> operator =(O *n) {
     if (n) n->ref();
     T *o = m_object;
     m_object = n;
@@ -153,16 +155,16 @@ public:
     return *this;
   }
 
-  ZuInline operator T *() const { return m_object; }
-  ZuInline T *operator ->() const { return m_object; }
+  operator T *() const { return m_object; }
+  T *operator ->() const { return m_object; }
 
   template <typename O = T>
-  ZuInline typename MatchRef<ZuRef<O>, O *>::T ptr() const {
+  MatchRef<ZuRef<O>, O *> ptr() const {
     return static_cast<O *>(m_object);
   }
   T *ptr_() const { return m_object; }
 
-  ZuInline bool operator !() const { return !m_object; }
+  bool operator !() const { return !m_object; }
 
   // traits
   struct Traits : public ZuTraits<T *> {
@@ -177,8 +179,8 @@ protected:
 template <typename T> struct ZuCmp;
 template <typename T>
 struct ZuCmp<ZuRef<T> > : public ZuCmp<T *> {
-  ZuInline static bool null(const ZuRef<T> &r) { return !r; }
-  ZuInline static const ZuRef<T> &null() { static const ZuRef<T> v; return v; }
+  static bool null(const ZuRef<T> &r) { return !r; }
+  static const ZuRef<T> &null() { static const ZuRef<T> v; return v; }
 };
 
 template <typename T> struct ZuHash;

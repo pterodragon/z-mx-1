@@ -87,17 +87,17 @@ template <typename S> struct ZuStdStream;
 
 template <typename S> struct ZuStdStream__ {
   enum { Is = 1 };
-  template <typename P> ZuInline static typename ZuIfT<ZuPrint<P>::String>::T
+  template <typename P> ZuInline static ZuIfT<ZuPrint<P>::String>
       print(S &s, const P &p) {
     const typename ZuTraits<P>::Elem *ptr = ZuTraits<P>::data(p);
     if (ZuLikely(ptr))
       ZuStdStream<S>::append(s, ptr, ZuTraits<P>::length(p));
   }
-  template <typename P> ZuInline static typename ZuIfT<ZuPrint<P>::Delegate>::T
+  template <typename P> ZuInline static ZuIfT<ZuPrint<P>::Delegate>
       print(S &s, const P &p) {
     ZuPrint<P>::print(s, p);
   }
-  template <typename P> static typename ZuIfT<ZuPrint<P>::Buffer>::T
+  template <typename P> static ZuIfT<ZuPrint<P>::Buffer>
       print(S &s, const P &p) {
     unsigned len = ZuPrint<P>::length(p);
     char *buf = ZuAlloca(buf, len);
@@ -138,11 +138,11 @@ template <typename S, typename P>
 struct ZuStdStreamable : public ZuStdStreamable_<S, P, ZuStdStream<S>::Is> { };
 
 template <typename S, typename P>
-inline typename ZuIfT<ZuStdStreamable<S, P>::OK, S &>::T
+inline ZuIfT<ZuStdStreamable<S, P>::OK, S &>
 operator <<(S &s, const P &p) { ZuStdStream<S>::print(s, p); return s; }
 
 template <typename S, typename P>
-inline typename ZuIfT<ZuStdStreamable<S, P>::OK, S &>::T
+inline ZuIfT<ZuStdStreamable<S, P>::OK, S &>
 operator +=(S &s, const P &p) { ZuStdStream<S>::print(s, p); return s; }
 
 #endif /* ZuPrint_HPP */

@@ -98,8 +98,11 @@ public:
 friend Base;
 template <typename, typename> friend class ZvCmdClient;
 
+  using IOBuf = Ztls::IOBuf;
+  using FBB = Zfb::IOBuilder<IOBuf::Size>;
+
 private:
-  using IORx = ZiIORx<Ztls::IOBuf>;
+  using IORx = ZiIORx<IOBuf>;
 
 public:
   const Impl *impl() const { return static_cast<const Impl *>(this); }
@@ -192,21 +195,21 @@ public:
 
 public:
   // send userDB request
-  void sendUserDB(Zfb::IOBuilder &fbb, ZvSeqNo seqNo, ZvCmdUserDBAckFn fn) {
+  void sendUserDB(FBB &fbb, ZvSeqNo seqNo, ZvCmdUserDBAckFn fn) {
     using namespace ZvCmd;
     ZvCmdHdr{fbb, ID::userDB()};
     m_userDBReqs.add(seqNo, ZuMv(fn));
     this->send(fbb.buf());
   }
   // send command
-  void sendCmd(Zfb::IOBuilder &fbb, ZvSeqNo seqNo, ZvCmdAckFn fn) {
+  void sendCmd(FBB &fbb, ZvSeqNo seqNo, ZvCmdAckFn fn) {
     using namespace ZvCmd;
     ZvCmdHdr{fbb, ID::cmd()};
     m_cmdReqs.add(seqNo, ZuMv(fn));
     this->send(fbb.buf());
   }
   // send telemetry request
-  void sendTelReq(Zfb::IOBuilder &fbb, ZvSeqNo seqNo, ZvCmdTelAckFn fn) {
+  void sendTelReq(FBB &fbb, ZvSeqNo seqNo, ZvCmdTelAckFn fn) {
     using namespace ZvCmd;
     ZvCmdHdr{fbb, ID::telReq()};
     m_telReqs.add(seqNo, ZuMv(fn));
@@ -228,7 +231,7 @@ public:
     IORx::connected();
 
     // send login
-    Zfb::IOBuilder fbb;
+    FBB fbb;
     if (m_credentials.type() == Credentials::Index<ZvCmd_Login>::I) {
       using namespace ZvUserDB;
       using namespace Zfb::Save;
@@ -394,12 +397,13 @@ class ZvCmdClient :
 public:
   using App = App_;
   using Link = Link_;
+  using FBB = typename Link::FBB;
   using Dispatcher = ZvCmdDispatcher;
   using TLS = Ztls::Client<App>;
 friend TLS;
 
-  ZuInline const App *app() const { return static_cast<const App *>(this); }
-  ZuInline App *app() { return static_cast<App *>(this); }
+  const App *app() const { return static_cast<const App *>(this); }
+  App *app() { return static_cast<App *>(this); }
 
   void init(ZiMultiplex *mx, const ZvCf *cf) {
     static const char *alpn[] = { "zcmd", 0 };

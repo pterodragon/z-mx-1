@@ -19,7 +19,7 @@
 
 // compile-time SFINAE (substitution failure is not an error)
 //
-// typename ZuIfT<bool B, typename T = void>::T evaluates to T (default void)
+// ZuIfT<bool B, typename T = void> evaluates to T (default void)
 // if B is true, or is a substitution failure if B is false
 
 #ifndef ZuIfT_HPP
@@ -33,7 +33,9 @@
 #pragma once
 #endif
 
-template <bool, typename U = void> struct ZuIfT { };
-template <typename U> struct ZuIfT<true, U> { using T = U; };
+template <bool, typename U = void> struct ZuIfT_ { };
+template <typename U> struct ZuIfT_<true, U> { using T = U; };
+template <bool B, typename U = void>
+using ZuIfT = typename ZuIfT_<B, U>::T;
 
 #endif /* ZuIfT_HPP */

@@ -95,11 +95,12 @@ public:
   }
   ~TelCap() { m_fn(nullptr); }
 
-  template <typename Data, typename FBS>
+  template <typename Data_>
   static TelCap keyedFn(ZtString path) {
-    using Key = decltype(ZuDeclVal<const Data &>().key());
-    struct Accessor : public ZuAccessor<Data, typename ZuDecay<Key>::T> {
-      static Key value(const Data &data) { return data.key(); }
+    using Data = ZvFB::Load<Data_>;
+    using Key = decltype(ZvFieldKey(ZuDeclVal<const Data &>()));
+    struct Accessor : public ZuAccessor<Data, ZuDecay<Key>> {
+      static Key value(const Data &data) { return ZvFieldKey(data); }
     };
     using Tree_ =
       ZmRBTree<Data,
@@ -116,17 +117,18 @@ public:
 	tree->clean();
 	return;
       }
+      using FBS = ZvFBS<Data>;
       auto fbs = static_cast<const FBS *>(fbs_);
-      auto node = tree->find(Data::key(fbs));
+      auto node = tree->find(ZvFB::key<Data>(fbs));
       if (!node)
 	tree->add(node = new typename Tree::Node{fbs});
       else
-	node->key().loadDelta(fbs);
+	ZvFB::loadUpdate(node->key(), fbs);
       l(&(node->key()));
     }};
   }
 
-  template <typename Data, typename FBS>
+  template <typename Data>
   static TelCap singletonFn(ZtString path) {
     return TelCap{[
 	l = ZvCSV<Data>{}.writeFile(path)](const void *fbs_) mutable {
@@ -134,12 +136,13 @@ public:
 	l(nullptr);
 	return;
       }
+      using FBS = ZvFBS<Data>;
       auto fbs = static_cast<const FBS *>(fbs_);
       static Data *data = nullptr;
       if (!data)
 	data = new Data{fbs};
       else
-	data->loadDelta(fbs);
+	ZvFB::loadUpdate(data, fbs);
       l(data);
     }};
   }
@@ -185,6 +188,8 @@ class ZCmd :
     public ZvCmdHost {
 public:
   using Base = ZvCmdClient<ZCmd, Link>;
+  using FBB = typename Base::FBB;
+
 friend Link;
 
   void init(ZiMultiplex *mx, const ZvCf *cf, bool interactive) {
@@ -205,7 +210,7 @@ friend Link;
 	  return code();
 	},
 	.end = [this]() { post(); },
-	.sig = [this](int sig) -> bool {
+	.sig = [](int sig) -> bool {
 	  switch (sig) {
 	    case SIGINT:
 	      raise(sig);
@@ -1325,38 +1330,38 @@ private:
 	  switch (types[i]) {
 	    case ReqType::Heap:
 	      m_telcap[TelData::Heap - TelData::MIN] =
-		TelCap::keyedFn<load<Heap>, fbs::Heap>(
+		TelCap::keyedFn<Heap>(
 		    ZiFile::append(dir, "heap.csv"));
 	      break;
 	    case ReqType::HashTbl:
 	      m_telcap[TelData::HashTbl - TelData::MIN] =
-		TelCap::keyedFn<load<HashTbl>, fbs::HashTbl>(
+		TelCap::keyedFn<HashTbl>(
 		    ZiFile::append(dir, "hash.csv"));
 	      break;
 	    case ReqType::Thread:
 	      m_telcap[TelData::Thread - TelData::MIN] =
-		TelCap::keyedFn<load<Thread>, fbs::Thread>(
+		TelCap::keyedFn<Thread>(
 		    ZiFile::append(dir, "thread.csv"));
 	      break;
 	    case ReqType::Mx:
 	      m_telcap[TelData::Mx - TelData::MIN] =
-		TelCap::keyedFn<load<Mx>, fbs::Mx>(
+		TelCap::keyedFn<Mx>(
 		    ZiFile::append(dir, "mx.csv"));
 	      m_telcap[TelData::Socket - TelData::MIN] =
-		TelCap::keyedFn<load<Socket>, fbs::Socket>(
+		TelCap::keyedFn<Socket>(
 		    ZiFile::append(dir, "socket.csv"));
 	      break;
 	    case ReqType::Queue:
 	      m_telcap[TelData::Queue - TelData::MIN] =
-		TelCap::keyedFn<load<Queue>, fbs::Queue>(
+		TelCap::keyedFn<Queue>(
 		    ZiFile::append(dir, "queue.csv"));
 	      break;
 	    case ReqType::Engine:
 	      m_telcap[TelData::Engine - TelData::MIN] =
-		TelCap::keyedFn<load<ZvTelemetry::Engine>, fbs::Engine>(
+		TelCap::keyedFn<ZvTelemetry::Engine>(
 		    ZiFile::append(dir, "engine.csv"));
 	      m_telcap[TelData::Link - TelData::MIN] =
-		TelCap::keyedFn<load<ZvTelemetry::Link>, fbs::Link>(
+		TelCap::keyedFn<ZvTelemetry::Link>(
 		    ZiFile::append(dir, "link.csv"));
 	      break;
 	    case ReqType::DBEnv:
@@ -1364,10 +1369,10 @@ private:
 		TelCap::singletonFn<load<DBEnv>, fbs::DBEnv>(
 		    ZiFile::append(dir, "dbenv.csv"));
 	      m_telcap[TelData::DBHost - TelData::MIN] =
-		TelCap::keyedFn<load<DBHost>, fbs::DBHost>(
+		TelCap::keyedFn<DBHost>(
 		    ZiFile::append(dir, "dbhost.csv"));
 	      m_telcap[TelData::DB - TelData::MIN] =
-		TelCap::keyedFn<load<DB>, fbs::DB>(
+		TelCap::keyedFn<DB>(
 		    ZiFile::append(dir, "db.csv"));
 	      break;
 	    case ReqType::App:
@@ -1437,7 +1442,7 @@ private:
   ZmRef<Link>		m_link;
   ZvSeqNo		m_seqNo = 0;
 
-  Zfb::IOBuilder	m_fbb;
+  FBB			m_fbb;
 
   int			m_code = 0;
   bool			m_exiting = false;

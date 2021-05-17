@@ -86,15 +86,15 @@ struct ZuDecimal {
   ZuDecimal(Unscaled_ _, int128_t v) : value{v} { }
 
   template <typename V>
-  ZuDecimal(V v, typename ZuIsIntegral<V>::T *_ = 0) :
+  ZuDecimal(V v, ZuIsIntegral<V> *_ = 0) :
       value(static_cast<int128_t>(v) * scale()) { }
 
   template <typename V>
-  ZuDecimal(V v, typename ZuIsFloatingPoint<V>::T *_ = 0) :
+  ZuDecimal(V v, ZuIsFloatingPoint<V> *_ = 0) :
       value((long double)v * scale_fp()) { }
 
   template <typename V>
-  ZuDecimal(V v, unsigned exponent, typename ZuIsIntegral<V>::T *_ = 0) :
+  ZuDecimal(V v, unsigned exponent, ZuIsIntegral<V> *_ = 0) :
       value(static_cast<int128_t>(v) * ZuDecimalFn::pow10_64(18 - exponent)) { }
 
   int128_t adjust(unsigned exponent) const {
@@ -348,7 +348,7 @@ public:
 
   // scan from string
   template <typename S>
-  ZuDecimal(const S &s_, typename ZuIsString<S>::T *_ = 0) {
+  ZuDecimal(const S &s_, ZuIsString<S> *_ = 0) {
     ZuString s(s_);
     if (ZuUnlikely(!s)) goto null;
     {

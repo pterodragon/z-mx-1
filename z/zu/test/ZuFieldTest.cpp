@@ -32,7 +32,7 @@ int main()
   using A = Foo::A;
   using B = Foo::B;
   A a;
-  ZuType<1, ZuFieldList<A>>::T::set(&a, "bye");
+  ZuType<1, ZuFieldList<A>>::set(&a, "bye");
   ZuTypeAll<ZuFieldList<A>>::invoke([a = &a]<typename T>() mutable {
     std::cout << T::id() << '=' << T::get(a) << '\n';
   });

@@ -363,7 +363,7 @@ namespace Load {
   using TypeList = ZuTypeList< \
     ZuPP_Eval(ZuPP_MapComma(ZfbEnum_Type, First_, __VA_ARGS__))>; \
   template <unsigned I> \
-  using Type = typename ZuType<I - First, TypeList>::T; \
+  using Type = ZuType<I - First, TypeList>; \
   template <typename T> \
   struct TypeIndex { enum { I = ZuTypeIndex<T, TypeList>::I + First }; }; \
   ZuPP_Eval(ZuPP_Map(ZfbEnum_Assert, First_, __VA_ARGS__)) \

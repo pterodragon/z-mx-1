@@ -68,7 +68,7 @@ class ZtIconv {
   public:
     enum { Const = sizeof(test(&iconv)) == sizeof(Small) };
   };
-  using InBuf = typename ZuIf<const char **, char **, IconvTraits::Const>::T;
+  using InBuf = ZuIf<const char **, char **, IconvTraits::Const>;
 
 public:
   ZtIconv(const char *tocode, const char *fromcode) :
@@ -78,7 +78,7 @@ public:
   }
 
   template <class Out, typename In>
-  typename ZuIfT<ZuTraits<Out>::IsString && ZuTraits<In>::IsString, int>::T
+  ZuIfT<ZuTraits<Out>::IsString && ZuTraits<In>::IsString, int>
   convert(Out &out, const In &in) {
     if (ZuUnlikely(m_cd == (iconv_t)-1)) return -1;
     const char *inBuf = (const char *)ZuTraits<In>::data(in);

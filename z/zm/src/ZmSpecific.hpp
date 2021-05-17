@@ -382,11 +382,11 @@ private:
 
 public:
   template <bool Construct = Construct_>
-  static typename ZuIfT<Construct, T *>::T create() {
+  static ZuIfT<Construct, T *> create() {
     return global()->create_();
   }
   template <bool Construct = Construct_>
-  static typename ZuIfT<!Construct, T *>::T create() {
+  static ZuIfT<!Construct, T *> create() {
     return nullptr;
   }
   static T *instance() {
@@ -402,8 +402,8 @@ public:
 };
 
 template <typename L>
-auto ZmTLS(L l, typename ZuIsLambdaFn<L>::T *_ = 0) {
-  using T = typename ZuDecay<decltype(*ZuLambdaFn<L>::invoke())>::T;
+auto ZmTLS(L l, ZuIsLambdaFn<L> *_ = 0) {
+  using T = ZuDecay<decltype(*ZuLambdaFn<L>::invoke())>;
   return ZmSpecific<T, true, ZuLambdaFn<L>::fn(l)>::instance();
 }
 

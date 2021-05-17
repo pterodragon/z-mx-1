@@ -139,16 +139,16 @@ struct ZuArrayFn_POD {
      ZuTraits<T2>::IsIntegral && ZuTraits<T2>::IsPrimitive) };
 };
 template <typename T1, typename T2, typename R = void>
-struct ZuArrayFn_SamePOD : public ZuIfT<ZuArrayFn_POD<T1, T2>::Same, R> { };
+using ZuArrayFn_SamePOD = ZuIfT<ZuArrayFn_POD<T1, T2>::Same, R>;
 template <typename T1, typename T2, typename R = void>
-struct ZuArrayFn_NotSamePOD : public ZuIfT<!ZuArrayFn_POD<T1, T2>::Same, R> { };
+using ZuArrayFn_NotSamePOD = ZuIfT<!ZuArrayFn_POD<T1, T2>::Same, R>;
 
 template <typename T, class Cmp>
 class ZuArrayFn_Ops<T, Cmp, true> : public ZuArrayFn_ItemOps<T, Cmp> {
 public:
   ZuInline static void destroyItems(T *dst, unsigned length) { }
   template <typename S>
-  static typename ZuArrayFn_NotSamePOD<T, S>::T copyItems(
+  static ZuArrayFn_NotSamePOD<T, S> copyItems(
       T *dst, const S *src, unsigned length) {
     if (ZuUnlikely(!length || dst == static_cast<const T *>(src))) return;
     if (static_cast<T *>(src) > dst ||
@@ -165,12 +165,12 @@ public:
     }
   }
   template <typename S>
-  ZuInline static typename ZuArrayFn_SamePOD<T, S>::T copyItems(
+  ZuInline static ZuArrayFn_SamePOD<T, S> copyItems(
       T *dst, const S *src, unsigned length) {
     memmove((void *)dst, src, length * sizeof(T));
   }
   template <typename S>
-  static typename ZuArrayFn_NotSamePOD<T, S>::T moveItems(
+  static ZuArrayFn_NotSamePOD<T, S> moveItems(
       T *dst, const S *src, unsigned length) {
     if (ZuUnlikely(!length || dst == static_cast<const T *>(src))) return;
     if (static_cast<T *>(src) > dst ||
@@ -187,7 +187,7 @@ public:
     }
   }
   template <typename S>
-  ZuInline static typename ZuArrayFn_SamePOD<T, S>::T moveItems(
+  ZuInline static ZuArrayFn_SamePOD<T, S> moveItems(
       T *dst, const S *src, unsigned length) {
     memmove((void *)dst, src, length * sizeof(T));
   }

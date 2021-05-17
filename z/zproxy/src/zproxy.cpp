@@ -73,14 +73,14 @@ template <typename T> struct Print : public ZuPrintable {
 
   // Error wrapper
   template <typename S, typename T_ = T>
-  typename ZuIs<T_, Error>::T print(S &s) const {
+  ZuIs<T_, Error> print(S &s) const {
     s << v.op()
       << "() - " << Zi::resultName(v.result()) << " - "
       << v.error();
   }
   // ZiCxnInfo
   template <typename S, typename T_ = T>
-  typename ZuIs<T_, ZiCxnInfo>::T print(S &s) const {
+  ZuIs<T_, ZiCxnInfo> print(S &s) const {
     s << (v.type() == ZiCxnType::TCPIn ? "IN  " : "OUT ") <<
       v.localIP << ':' << ZuBoxed(v.localPort) << " -> " <<
       v.remoteIP << ':' << ZuBoxed(v.remotePort);

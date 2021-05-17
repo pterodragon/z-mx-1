@@ -1058,7 +1058,7 @@ public:
   void appData(T v) { m_appData.store_((uintptr_t)v); }
 
   template <typename T = MxMDFeedOB>
-  typename ZuIs<MxMDFeedOB, T, ZmRef<T> &>::T feedOB() {
+  ZuIs<MxMDFeedOB, T, ZmRef<T> &> feedOB() {
     ZmRef<T> *ZuMayAlias(ptr) = (ZmRef<T> *)&m_feedOB;
     return *ptr;
   }
@@ -1838,12 +1838,12 @@ public:
   unsigned nShards() const { return m_shards.length(); }
   MxMDShard *shard(unsigned i) const { return m_shards[i]; }
   template <typename L>
-  typename ZuNotMutable<L>::T shard(unsigned i, L l) const {
+  ZuNotMutable<L> shard(unsigned i, L l) const {
     MxMDShard *shard = m_shards[i];
     m_scheduler->invoke(shard->tid(), [l = ZuMv(l), shard]() { l(shard); });
   }
   template <typename L>
-  typename ZuIsMutable<L>::T shard(unsigned i, L l) const {
+  ZuIsMutable<L> shard(unsigned i, L l) const {
     MxMDShard *shard = m_shards[i];
     m_scheduler->invoke(shard->tid(),
 	[l = ZuMv(l), shard]() mutable { l(shard); });

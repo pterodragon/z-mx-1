@@ -224,12 +224,12 @@ struct ZuCmp_NullFn {
 template <typename T, bool Fwd, bool = ZuCmp_Can<T, T>::OK>
 struct ZuCmp_NonPrimitive : public ZuCmp_NullFn<T> {
   template <typename P1, typename P2, typename T_ = T>
-  static typename ZuIfT<ZuCmp_Can<P1, P2>::OK, int>::T
+  static ZuIfT<ZuCmp_Can<P1, P2>::OK, int>
   cmp(const P1 &p1, const P2 &p2) {
     return p1.cmp(p2);
   }
   template <typename P1, typename P2>
-  static typename ZuIfT<!ZuCmp_Can<P1, P2>::OK, int>::T
+  static ZuIfT<!ZuCmp_Can<P1, P2>::OK, int>
   cmp(const P1 &p1, const P2 &p2) {
     return (p1 > p2) - (p1 < p2);
   }
@@ -258,7 +258,7 @@ template <typename T, bool Fwd>
 struct ZuCmp_NonPrimitive<T, Fwd, true> : public ZuCmp_NullFn<T> {
   template <typename P1, typename P2>
   static int cmp(const P1 &p1, const P2 &p2) {
-    return ZuCmp_NonPrimitive_<T, typename ZuDecay<P1>::T, Fwd>::cmp(p1, p2);
+    return ZuCmp_NonPrimitive_<T, ZuDecay<P1>, Fwd>::cmp(p1, p2);
   }
   template <typename P1, typename P2>
   static bool less(const P1 &p1, const P2 &p2) { return p1 < p2; }
@@ -435,28 +435,28 @@ struct ZuCmp_String;
 template <typename T, bool IsString>
 struct ZuCmp_String<T, 1, IsString, 0> {
   template <typename S1, typename S2>
-  static typename ZuIfT<
+  static ZuIfT<
       ZuTraits<S1>::IsCString &&
       (ZuTraits<S2>::IsCString || ZuTraits<S2>::IsString) &&
-      !ZuTraits<S2>::IsWString, int>::T cmp(const S1 &s1, const S2 &s2) {
+      !ZuTraits<S2>::IsWString, int> cmp(const S1 &s1, const S2 &s2) {
     return ZuCmp_StrCmp<S1, S2,
 			ZuTraits<S2>::IsCString,
 			ZuTraits<S1>::IsString, 0>::cmp(s1, s2);
   }
   template <typename S1, typename S2>
-  static typename ZuIfT<
+  static ZuIfT<
       ZuTraits<S1>::IsCString &&
       (ZuTraits<S2>::IsCString || ZuTraits<S2>::IsString) &&
-      !ZuTraits<S2>::IsWString, bool>::T less(const S1 &s1, const S2 &s2) {
+      !ZuTraits<S2>::IsWString, bool> less(const S1 &s1, const S2 &s2) {
     return ZuCmp_StrCmp<S1, S2,
 			ZuTraits<S2>::IsCString,
 			ZuTraits<S1>::IsString, 0>::less(s1, s2);
   }
   template <typename S1, typename S2>
-  static typename ZuIfT<
+  static ZuIfT<
       ZuTraits<S1>::IsCString &&
       (ZuTraits<S2>::IsCString || ZuTraits<S2>::IsString) &&
-      !ZuTraits<S2>::IsWString, bool>::T equals(const S1 &s1, const S2 &s2) {
+      !ZuTraits<S2>::IsWString, bool> equals(const S1 &s1, const S2 &s2) {
     return ZuCmp_StrCmp<S1, S2,
 			ZuTraits<S2>::IsCString,
 			ZuTraits<S1>::IsString, 0>::equals(s1, s2);
@@ -469,24 +469,24 @@ struct ZuCmp_String<T, 1, IsString, 0> {
 template <typename T>
 struct ZuCmp_String<T, 0, 1, 0> {
   template <typename S1, typename S2>
-  static typename ZuIfT<
+  static ZuIfT<
       ZuTraits<S1>::IsString &&
       (ZuTraits<S2>::IsCString || ZuTraits<S2>::IsString) &&
-      !ZuTraits<S2>::IsWString, int>::T cmp(const S1 &s1, const S2 &s2) {
+      !ZuTraits<S2>::IsWString, int> cmp(const S1 &s1, const S2 &s2) {
     return ZuCmp_StrCmp<S1, S2, 0, 1, 0>::cmp(s1, s2);
   }
   template <typename S1, typename S2>
-  static typename ZuIfT<
+  static ZuIfT<
       ZuTraits<S1>::IsString &&
       (ZuTraits<S2>::IsCString || ZuTraits<S2>::IsString) &&
-      !ZuTraits<S2>::IsWString, bool>::T less(const S1 &s1, const S2 &s2) {
+      !ZuTraits<S2>::IsWString, bool> less(const S1 &s1, const S2 &s2) {
     return ZuCmp_StrCmp<S1, S2, 0, 1, 0>::less(s1, s2);
   }
   template <typename S1, typename S2>
-  static typename ZuIfT<
+  static ZuIfT<
       ZuTraits<S1>::IsString &&
       (ZuTraits<S2>::IsCString || ZuTraits<S2>::IsString) &&
-      !ZuTraits<S2>::IsWString, bool>::T equals(const S1 &s1, const S2 &s2) {
+      !ZuTraits<S2>::IsWString, bool> equals(const S1 &s1, const S2 &s2) {
     return ZuCmp_StrCmp<S1, S2, 0, 1, 0>::equals(s1, s2);
   }
   static bool null(const T &s) { return !s; }
@@ -495,28 +495,28 @@ struct ZuCmp_String<T, 0, 1, 0> {
 template <typename T, bool IsString>
 struct ZuCmp_String<T, 1, IsString, 1> {
   template <typename S1, typename S2>
-  static typename ZuIfT<
+  static ZuIfT<
       ZuTraits<S1>::IsCString &&
       (ZuTraits<S2>::IsCString || ZuTraits<S2>::IsString) &&
-      ZuTraits<S2>::IsWString, int>::T cmp(const S1 &s1, const S2 &s2) {
+      ZuTraits<S2>::IsWString, int> cmp(const S1 &s1, const S2 &s2) {
     return ZuCmp_StrCmp<S1, S2,
 			ZuTraits<S2>::IsCString,
 			ZuTraits<S1>::IsString, 1>::cmp(s1, s2);
   }
   template <typename S1, typename S2>
-  static typename ZuIfT<
+  static ZuIfT<
       ZuTraits<S1>::IsCString &&
       (ZuTraits<S2>::IsCString || ZuTraits<S2>::IsString) &&
-      ZuTraits<S2>::IsWString, bool>::T less(const S1 &s1, const S2 &s2) {
+      ZuTraits<S2>::IsWString, bool> less(const S1 &s1, const S2 &s2) {
     return ZuCmp_StrCmp<S1, S2,
 			ZuTraits<S2>::IsCString,
 			ZuTraits<S1>::IsString, 1>::less(s1, s2);
   }
   template <typename S1, typename S2>
-  static typename ZuIfT<
+  static ZuIfT<
       ZuTraits<S1>::IsCString &&
       (ZuTraits<S2>::IsCString || ZuTraits<S2>::IsString) &&
-      ZuTraits<S2>::IsWString, bool>::T equals(const S1 &s1, const S2 &s2) {
+      ZuTraits<S2>::IsWString, bool> equals(const S1 &s1, const S2 &s2) {
     return ZuCmp_StrCmp<S1, S2,
 			ZuTraits<S2>::IsCString,
 			ZuTraits<S1>::IsString, 1>::equals(s1, s2);
@@ -530,24 +530,24 @@ struct ZuCmp_String<T, 1, IsString, 1> {
 template <typename T>
 struct ZuCmp_String<T, 0, 1, 1> {
   template <typename S1, typename S2>
-  static typename ZuIfT<
+  static ZuIfT<
       ZuTraits<S1>::IsString &&
       (ZuTraits<S2>::IsCString || ZuTraits<S2>::IsString) &&
-      ZuTraits<S2>::IsWString, int>::T cmp(const S1 &s1, const S2 &s2) {
+      ZuTraits<S2>::IsWString, int> cmp(const S1 &s1, const S2 &s2) {
     return ZuCmp_StrCmp<S1, S2, 0, 1, 1>::cmp(s1, s2);
   }
   template <typename S1, typename S2>
-  static typename ZuIfT<
+  static ZuIfT<
       ZuTraits<S1>::IsString &&
       (ZuTraits<S2>::IsCString || ZuTraits<S2>::IsString) &&
-      ZuTraits<S2>::IsWString, bool>::T less(const S1 &s1, const S2 &s2) {
+      ZuTraits<S2>::IsWString, bool> less(const S1 &s1, const S2 &s2) {
     return ZuCmp_StrCmp<S1, S2, 0, 1, 1>::less(s1, s2);
   }
   template <typename S1, typename S2>
-  static typename ZuIfT<
+  static ZuIfT<
       ZuTraits<S1>::IsString &&
       (ZuTraits<S2>::IsCString || ZuTraits<S2>::IsString) &&
-      ZuTraits<S2>::IsWString, bool>::T equals(const S1 &s1, const S2 &s2) {
+      ZuTraits<S2>::IsWString, bool> equals(const S1 &s1, const S2 &s2) {
     return ZuCmp_StrCmp<S1, S2, 0, 1, 1>::equals(s1, s2);
   }
   static bool null(const T &s) { return !s; }
@@ -569,7 +569,7 @@ template <typename T> struct ZuCmp_<T, true> :
 // generic template
 
 template <typename T> struct ZuCmp :
-  public ZuCmp_<typename ZuDecay<T>::T,
+  public ZuCmp_<ZuDecay<T>,
     ZuTraits<T>::IsCString || ZuTraits<T>::IsString> { };
 
 // comparison of bool

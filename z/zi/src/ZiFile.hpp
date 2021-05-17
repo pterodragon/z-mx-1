@@ -179,28 +179,24 @@ private:
 
   void init_(Handle handle, unsigned flags, int blkSize, Offset mmapLength = 0);
 
-  template <typename U, typename R = void,
-	   bool B = ZuPrint<U>::Delegate && !ZuTraits<U>::IsString>
-  struct MatchPDelegate;
-  template <typename U, typename R>
-  struct MatchPDelegate<U, R, 1> { using T = R; };
-  template <typename U, typename R = void,
-	   bool B = ZuPrint<U>::Buffer && !ZuTraits<U>::IsString>
-  struct MatchPBuffer;
-  template <typename U, typename R>
-  struct MatchPBuffer<U, R, 1> { using T = R; };
+  template <typename U, typename R = void>
+  using MatchPDelegate =
+    ZuIfT<ZuPrint<U>::Delegate && !ZuTraits<U>::IsString, R>;
+  template <typename U, typename R = void>
+  using MatchPBuffer =
+    ZuIfT<ZuPrint<U>::Buffer && !ZuTraits<U>::IsString, R>;
 
-  template <typename S> typename ZuIsString<S>::T append_(S &&s_) {
+  template <typename S> ZuIsString<S> append_(S &&s_) {
     ZuString s(ZuFwd<S>(s_));
     if (ZuUnlikely(!s)) return;
     ZeError e;
     if (ZuUnlikely(write(s.data(), s.length(), &e) != Zi::OK))
       throw e;
   }
-  template <typename P> typename MatchPDelegate<P>::T append_(P &&p) {
+  template <typename P> MatchPDelegate<P> append_(P &&p) {
     ZuPrint<P>::print(*this, ZuFwd<P>(p));
   }
-  template <typename P> typename MatchPBuffer<P>::T append_(const P &p) {
+  template <typename P> MatchPBuffer<P> append_(const P &p) {
     unsigned len = ZuPrint<P>::length(p);
     char *buf = ZuAlloca(buf, len);
     if (ZuUnlikely(!buf)) throw ZeError(ZiENOMEM);

@@ -159,7 +159,7 @@ private:
 
   void initFn() {
     dispatch(
-	[this](auto &&v) { initFn_<typename ZuDecay<decltype(v)>::T>(); });
+	[this](auto &&v) { initFn_<ZuDecay<decltype(v)>>(); });
   }
   template <typename Reader>
   void initFn_() {
@@ -238,7 +238,7 @@ private:
   }
 
   void initFn() {
-    dispatch([this](auto &&v) { initFn_<typename ZuDecay<decltype(v)>::T>(); });
+    dispatch([this](auto &&v) { initFn_<ZuDecay<decltype(v)>>(); });
   }
   template <typename Writer>
   void initFn_() {
@@ -258,12 +258,13 @@ private:
   SyncFn	m_syncFn = nullptr;
 };
 
+template <typename Field>
+struct FieldFilter { enum { OK = (Field::Flags & ZvFieldFlags::Series) }; };
+
 template <typename T>
-const ZvVFieldArray fields() {
-  template <typename Field>
-  struct SeriesOK { enum { OK = (Field::Flags & ZvFieldFlags::Series) }; };
-  using Fields = typename ZuTypeGrep<SeriesOK, ZvFields<T>>::T;
-  return ZvMkVFields<Fields>();
+ZvVFieldArray fields() {
+  using Fields = ZuTypeGrep<FieldFilter, ZvFieldList<T>>;
+  return ZvVFields_<Fields>();
 }
 
 class ZdfAPI DataFrame {
@@ -371,7 +372,7 @@ public:
   unsigned nSeries() const { return m_series.length(); }
   const Series *series(unsigned i) const { return m_series[i]; }
   Series *series(unsigned i) { return m_series[i]; }
-  const ZvField *field(unsigned i) const { return m_fields[i]; }
+  const ZvVField *field(unsigned i) const { return m_fields[i]; }
 
 private:
   constexpr static const uint64_t pow10_9() { return 1000000000UL; }

@@ -401,9 +401,9 @@ template <> struct ZuTraits<void> : public ZuBaseTraits<void> {
 // SFINAE techniques...
 #define ZuTraits_SFINAE(Trait) \
 template <typename U, typename R = void> \
-struct ZuIs##Trait : public ZuIfT<ZuTraits<U>::Is##Trait, R> { }; \
+using ZuIs##Trait = ZuIfT<ZuTraits<U>::Is##Trait, R>; \
 template <typename U, typename R = void> \
-struct ZuNot##Trait : public ZuIfT<!ZuTraits<U>::Is##Trait, R> { };
+using ZuNot##Trait = ZuIfT<!ZuTraits<U>::Is##Trait, R>;
 
 ZuTraits_SFINAE(Primitive)
 ZuTraits_SFINAE(Real)
@@ -425,16 +425,17 @@ ZuTraits_SFINAE(FloatingPoint)
 
 #undef ZuTraits_SFINAE
 
-template <typename U, typename R = void> struct ZuIsCharString :
-  public ZuIfT<ZuTraits<U>::IsString && !ZuTraits<U>::IsWString, R> { };
+template <typename U, typename R = void>
+using ZuIsCharString =
+  ZuIfT<ZuTraits<U>::IsString && !ZuTraits<U>::IsWString, R>;
 
 // STL / Boost interoperability
 template <typename T, typename Char>
 struct ZuStdStringTraits_ : public ZuBaseTraits<T> {
   enum { IsString = 1 };
   using Elem = Char;
-  ZuInline static const Char *data(const T &s) { return s.data(); }
-  ZuInline static unsigned length(const T &s) { return s.length(); }
+  static const Char *data(const T &s) { return s.data(); }
+  static unsigned length(const T &s) { return s.length(); }
 };
 template <typename T_>
 struct ZuStdStringTraits : public ZuStdStringTraits_<T_, char> { };
@@ -509,8 +510,8 @@ template <typename R, typename T, typename ...Args>
 struct ZuLambdaTraits<R (T::*)(Args...)> { enum { IsMutable = 1 }; };
 
 template <typename L, typename T = void>
-struct ZuIsMutable : public ZuIfT<ZuLambdaTraits<L>::IsMutable, T> { };
+using ZuIsMutable = ZuIfT<ZuLambdaTraits<L>::IsMutable, T>;
 template <typename L, typename T = void>
-struct ZuNotMutable : public ZuIfT<!ZuLambdaTraits<L>::IsMutable, T> { };
+using ZuNotMutable = ZuIfT<!ZuLambdaTraits<L>::IsMutable, T>;
 
 #endif /* ZuTraits_HPP */

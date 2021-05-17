@@ -98,69 +98,61 @@ using MxRatio = MxUInt8;	// ratio numerator (orders w/ multiple legs)
 // MxMatch*<> - SFINAE templates used in declaring overloaded templated
 // functions that need to unambiguously specialize for the various Mx
 // vocabulary types
-template <typename T> struct MxIsChar { enum { OK =
-  ZuConversion<char, T>::Same }; };
-template <typename T, typename R = void, bool A = MxIsChar<T>::OK>
-  struct MxMatchChar;
-template <typename U, typename R>
-  struct MxMatchChar<U, R, true> { using T = R; };
+template <typename T> struct MxIsChar {
+  enum { OK = ZuConversion<char, T>::Same };
+};
+template <typename T, typename R = void>
+using MxMatchChar = ZuIfT<MxIsChar<T>::OK, R>;
 
-template <typename T> struct MxIsBool { enum { OK =
-  ZuConversion<bool, T>::Same ||
-  ZuConversion<MxBool, T>::Is }; };
-template <typename T, typename R = void, bool A = MxIsBool<T>::OK>
-  struct MxMatchBool;
-template <typename U, typename R>
-  struct MxMatchBool<U, R, true> { using T = R; };
+template <typename T> struct MxIsBool {
+  enum { OK = ZuConversion<bool, T>::Same || ZuConversion<MxBool, T>::Is };
+};
+template <typename T, typename R = void>
+using MxMatchBool = ZuIfT<MxIsBool<T>::OK, R>;
 
-template <typename T> struct MxIsEnum { enum { OK =
-  ZuConversion<MxEnum, T>::Is }; };
-template <typename T, typename R = void, bool A = MxIsEnum<T>::OK>
-  struct MxMatchEnum;
-template <typename U, typename R>
-  struct MxMatchEnum<U, R, true> { using T = R; };
+template <typename T> struct MxIsEnum {
+  enum { OK = ZuConversion<MxEnum, T>::Is };
+};
+template <typename T, typename R = void>
+using MxMatchEnum = ZuIfT<MxIsEnum<T>::OK, R>;
 
-template <typename T> struct MxIsFlags { enum { OK =
-  ZuConversion<MxFlags, T>::Is ||
-  ZuConversion<MxFlags64, T>::Is }; };
-template <typename T, typename R = void, bool A = MxIsFlags<T>::OK>
-  struct MxMatchFlags;
-template <typename U, typename R>
-  struct MxMatchFlags<U, R, true> { using T = R; };
+template <typename T> struct MxIsFlags {
+  enum { OK = ZuConversion<MxFlags, T>::Is || ZuConversion<MxFlags64, T>::Is };
+};
+template <typename T, typename R = void>
+using MxMatchFlags = ZuIfT<MxIsFlags<T>::OK, R>;
 
-template <typename T> struct MxIsInt { enum { OK =
-  ZuTraits<T>::IsReal &&
-  ZuTraits<T>::IsIntegral &&
-  !MxIsChar<T>::OK &&
-  !MxIsBool<T>::OK &&
-  !MxIsEnum<T>::OK &&
-  !MxIsFlags<T>::OK }; };
-template <typename T, typename R = void, bool A = MxIsInt<T>::OK>
-  struct MxMatchInt;
-template <typename U, typename R>
-  struct MxMatchInt<U, R, true> { using T = R; };
+template <typename T> struct MxIsInt {
+  enum { OK =
+    ZuTraits<T>::IsReal &&
+    ZuTraits<T>::IsIntegral &&
+    !MxIsChar<T>::OK &&
+    !MxIsBool<T>::OK &&
+    !MxIsEnum<T>::OK &&
+    !MxIsFlags<T>::OK };
+};
+template <typename T, typename R = void>
+using MxMatchInt = ZuIfT<MxIsInt<T>::OK, R>;
 
-template <typename T> struct MxIsFloat { enum { OK =
-  ZuTraits<T>::IsFloatingPoint }; };
-template <typename T, typename R = void, bool A = MxIsFloat<T>::OK>
-  struct MxMatchFloat;
-template <typename U, typename R>
-  struct MxMatchFloat<U, R, true> { using T = R; };
+template <typename T> struct MxIsFloat {
+  enum { OK = ZuTraits<T>::IsFloatingPoint };
+};
+template <typename T, typename R = void>
+using MxMatchFloat = ZuIfT<MxIsFloat<T>::OK, R>;
 
-template <typename T> struct MxIsString { enum { OK =
-  ZuConversion<ZuStringN__, T>::Base &&
-  !ZuTraits<T>::IsWString }; };
-template <typename T, typename R = void, bool A = MxIsString<T>::OK>
-  struct MxMatchString;
-template <typename U, typename R>
-  struct MxMatchString<U, R, true> { using T = R; };
+template <typename T> struct MxIsString {
+  enum { OK =
+    ZuConversion<ZuStringN__, T>::Base && !ZuTraits<T>::IsWString
+  };
+};
+template <typename T, typename R = void>
+using MxMatchString = ZuIfT<MxIsString<T>::OK, R>;
 
-template <typename T> struct MxIsTime { enum { OK =
-  ZuConversion<MxDateTime, T>::Is }; };
-template <typename T, typename R = void, bool A = MxIsTime<T>::OK>
-  struct MxMatchTime;
-template <typename U, typename R>
-  struct MxMatchTime<U, R, true> { using T = R; };
+template <typename T> struct MxIsTime {
+  enum { OK = ZuConversion<MxDateTime, T>::Is };
+};
+template <typename T, typename R = void>
+using MxMatchTime = ZuIfT<MxIsTime<T>::OK, R>;
 
 // MxType<T>::T returns the MxType corresponding to the generic type T,
 // except that string types are passed through as is

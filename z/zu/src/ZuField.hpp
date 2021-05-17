@@ -33,7 +33,7 @@
 template <auto> struct ZuFieldRdFn_;
 template <typename U, typename R, R (U::*Get)() const>
 struct ZuFieldRdFn_<Get> {
-  using T = typename ZuDecay<R>::T;
+  using T = ZuDecay<R>;
   static R get(const void *o) {
     return (static_cast<const U *>(o)->*Get)();
   }
@@ -60,7 +60,7 @@ constexpr auto ZuFieldFn_Set(void (U::*fn)(P)) noexcept {
 template <auto Member> struct ZuFieldRdData_;
 template <typename U, typename M, M U::*Member>
 struct ZuFieldRdData_<Member> {
-  using T = typename ZuDecay<decltype(ZuDeclVal<const U &>().*Member)>::T;
+  using T = ZuDecay<decltype(ZuDeclVal<const U &>().*Member)>;
   static const auto &get(const void *o) {
     return static_cast<const U *>(o)->*Member;
   }

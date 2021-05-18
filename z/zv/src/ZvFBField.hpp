@@ -45,16 +45,12 @@ using ZvFBS = ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>;
 #define ZvFBField_Name_(U, Type, ID, ...) U##_##ID##_FB
 #define ZvFBField_Name(U, Args) ZuPP_Defer(ZvFBField_Name_)(U, ZuPP_Strip(Args))
 
-// FIXME - X Fields
+#define ZvFBField_ReadOnly_(U, Type, ID, Base) \
+  struct ZvFBField_Name_(U, Type, ID) : public Base { };
 
-#define ZvFBField_ReadOnly_(U, Type, Fn, ID, ...) \
-  struct ZvFBField_Name_(U, Type, ID) : \
-      public ZvFieldRd##Type##Fn(U, ID, __VA_ARGS__) { };
-
-#define ZvFBField_Composite_(U, Type, Fn, ID, Flags, SaveFn, LoadFn) \
-  struct ZvFBField_Name_(U, Type, ID) : \
-      public ZvField##Type##Fn(U, ID, Flags) { \
-    using Base = ZvField##Type##Fn(U, ID, Flags); \
+#define ZvFBField_Composite_(U, Type, ID, Base_, SaveFn, LoadFn) \
+  struct ZvFBField_Name_(U, Type, ID) : public Base_ { \
+    using Base = Base_; \
     using T = typename Base::T; \
     using FBB = ZvFBB<U>; \
     using FBS = ZvFBS<U>; \
@@ -73,30 +69,57 @@ using ZvFBS = ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>;
     static void load(void *o, const FBS *o_) { Base::set(o, load_(o_)); } \
   };
 
-#define ZvFBFieldString(U, ID, Flags) \
-  ZvFBField_Composite_(U, String,, ID, Flags, str, str)
-#define ZvFBFieldStringFn(U, ID, Flags) \
-  ZvFBField_Composite_(U, String, Fn, ID, Flags, str, str)
+#define ZvFBFieldXString(U, ID, Member, Flags) \
+  ZvFBField_Composite_(U, String, ID, \
+      ZvFieldXString(U, ID, Member, Flags), str, str)
+#define ZvFBFieldXStringFn(U, ID, Get, Set, Flags) \
+  ZvFBField_Composite_(U, String, ID, \
+      ZvFieldXStringFn(U, ID, Get, Set, Flags), str, str)
 
-#define ZvFBFieldRdString(U, ID, Flags) \
-  ZvFBField_ReadOnly_(U, String,, ID, Flags)
-#define ZvFBFieldRdStringFn(U, ID, Flags) \
-  ZvFBField_ReadOnly_(U, String, Fn, ID, Flags)
+#define ZvFBFieldXRdString(U, ID, Member, Flags) \
+  ZvFBField_ReadOnly_(U, String, ID, \
+      ZvFieldXRdString(U, ID, Member, Flags))
+#define ZvFBFieldXRdStringFn(U, ID, Get, Flags) \
+  ZvFBField_ReadOnly_(U, String, ID, \
+      ZvFieldXRdStringFn(U, ID, Get, Flags))
 
-#define ZvFBFieldComposite(U, ID, Flags, SaveFn, LoadFn) \
-  ZvFBField_Composite_(U, Composite,, ID, Flags, SaveFn, LoadFn)
-#define ZvFBFieldCompositeFn(U, ID, Flags, SaveFn, LoadFn) \
-  ZvFBField_Composite_(U, Composite, Fn, ID, Flags, SaveFn, LoadFn)
+#define ZvFBFieldRdString(U, Member, Flags) \
+  ZvFBFieldXRdString(U, Member, Member, Flags)
+#define ZvFBFieldRdStringFn(U, Fn, Flags) \
+  ZvFBFieldXRdStringFn(U, Fn, Fn, Flags)
 
-#define ZvFBFieldRdComposite(U, ID, Flags) \
-  ZvFBField_ReadOnly_(U, Composite,, ID, Flags)
-#define ZvFBFieldRdCompositeFn(U, ID, Flags) \
-  ZvFBField_ReadOnly_(U, Composite, Fn, ID, Flags)
+#define ZvFBFieldString(U, Member, Flags) \
+  ZvFBFieldXString(U, Member, Member, Flags)
+#define ZvFBFieldStringFn(U, Fn, Flags) \
+  ZvFBFieldXStringFn(U, Fn, Fn, Fn, Flags)
 
-#define ZvFBField_Inline_(U, Fn, ID, Flags, SaveFn, LoadFn) \
-  struct ZvFBField_Name_(U, Inline, ID) : \
-      public ZvFieldComposite##Fn(U, ID, Flags) { \
-    using Base = ZvFieldComposite##Fn(U, ID, Flags); \
+#define ZvFBFieldXComposite(U, ID, Member, Flags, SaveFn, LoadFn) \
+  ZvFBField_Composite_(U, Composite, ID, \
+      ZvFieldXComposite(U, ID, Member, Flags), SaveFn, LoadFn)
+#define ZvFBFieldXCompositeFn(U, ID, Get, Set, Flags, SaveFn, LoadFn) \
+  ZvFBField_Composite_(U, Composite, ID, \
+      ZvFieldXCompositeFn(U, ID, Get, Set, Flags), SaveFn, LoadFn)
+
+#define ZvFBFieldXRdComposite(U, ID, Member, Flags) \
+  ZvFBField_ReadOnly_(U, Composite, ID, \
+      ZvFieldXRdComposite(U, ID, Member, Flags))
+#define ZvFBFieldXRdCompositeFn(U, ID, Get, Flags) \
+  ZvFBField_ReadOnly_(U, Composite, ID, \
+      ZvFieldXRdCompositeFn(U, ID, Get, Flags))
+
+#define ZvFBFieldRdComposite(U, Member, Flags) \
+  ZvFBFieldXRdComposite(U, Member, Member, Flags)
+#define ZvFBFieldRdCompositeFn(U, Fn, Flags) \
+  ZvFBFieldXRdCompositeFn(U, Fn, Fn, Flags)
+
+#define ZvFBFieldComposite(U, Member, Flags, SaveFn, LoadFn) \
+  ZvFBFieldXComposite(U, Member, Member, Flags, SaveFn, LoadFn)
+#define ZvFBFieldCompositeFn(U, Fn, Flags, SaveFn, LoadFn) \
+  ZvFBFieldXCompositeFn(U, Fn, Fn, Fn, Flags, SaveFn, LoadFn)
+
+#define ZvFBField_Inline_(U, ID, Base_, SaveFn, LoadFn) \
+  struct ZvFBField_Name_(U, Inline, ID) : public Base_ { \
+    using Base = Base_; \
     using FBB = ZvFBB<U>; \
     using FBS = ZvFBS<U>; \
     enum { Inline = 1 }; \
@@ -115,15 +138,21 @@ using ZvFBS = ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>;
     } \
   };
 
-#define ZvFBFieldInline(U, ID, Flags, SaveFn, LoadFn) \
-  ZvFBField_Inline_(U,, ID, Flags, SaveFn, LoadFn)
-#define ZvFBFieldInlineFn(U, ID, Flags, SaveFn, LoadFn) \
-  ZvFBField_Inline_(U, Fn, ID, Flags, SaveFn, LoadFn)
+#define ZvFBFieldXInline(U, ID, Member, Flags, SaveFn, LoadFn) \
+  ZvFBField_Inline_(U, ID, \
+      ZvFieldXComposite(U, ID, Member, Flags), SaveFn, LoadFn)
+#define ZvFBFieldXInlineFn(U, ID, Get, Set, Flags, SaveFn, LoadFn) \
+  ZvFBField_Inline_(U, ID, \
+      ZvFieldXCompositeFn(U, ID, Get, Set, Flags), SaveFn, LoadFn)
 
-#define ZvFBField_Int_(U, Type, Fn, ID, Flags) \
-  struct ZvFBField_Name_(U, Type, ID) : \
-      public ZvField##Type##Fn(U, ID, Flags) { \
-    using Base = ZvField##Type##Fn(U, ID, Flags); \
+#define ZvFBFieldInline(U, Member, Flags, SaveFn, LoadFn) \
+  ZvFBFieldXInline(U, Member, Member, Flags, SaveFn, LoadFn)
+#define ZvFBFieldInlineFn(U, Fn, Flags, SaveFn, LoadFn) \
+  ZvFBFieldXInlineFn(U, Fn, Fn, Fn, Flags, SaveFn, LoadFn)
+
+#define ZvFBField_Int_(U, Type, ID, Base_) \
+  struct ZvFBField_Name_(U, Type, ID) : public Base_ { \
+    using Base = Base_; \
     using T = typename Base::T; \
     using FBB = ZvFBB<U>; \
     using FBS = ZvFBS<U>; \
@@ -133,28 +162,53 @@ using ZvFBS = ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>;
     static void load(void *o, const FBS *o_) { Base::set(o, load_(o_)); } \
   };
 
-#define ZvFBFieldBool(U, ID, Flags) \
-  ZvFBField_Int_(U, Bool,, ID, Flags)
-#define ZvFBFieldBoolFn(U, ID, Flags) \
-  ZvFBField_Int_(U, Bool, Fn, ID, Flags)
-#define ZvFBFieldInt(U, ID, Flags) \
-  ZvFBField_Int_(U, Int,, ID, Flags)
-#define ZvFBFieldIntFn(U, ID, Flags) \
-  ZvFBField_Int_(U, Int, Fn, ID, Flags)
+#define ZvFBFieldXBool(U, ID, Member, Flags) \
+  ZvFBField_Int_(U, Bool, ID, ZvFieldXBool(U, ID, Member, Flags))
+#define ZvFBFieldXBoolFn(U, ID, Get, Set, Flags) \
+  ZvFBField_Int_(U, Bool, ID, ZvFieldXBoolFn(U, ID, Get, Set, Flags))
 
-#define ZvFBFieldRdBool(U, ID, Flags) \
-  ZvFBField_ReadOnly_(U, Bool,, ID, Flags)
-#define ZvFBFieldRdBoolFn(U, ID, Flags) \
-  ZvFBField_ReadOnly_(U, Bool, Fn, ID, Flags)
-#define ZvFBFieldRdInt(U, ID, Flags) \
-  ZvFBField_ReadOnly_(U, Int,, ID, Flags)
-#define ZvFBFieldRdIntFn(U, ID, Flags) \
-  ZvFBField_ReadOnly_(U, Int, Fn, ID, Flags)
+#define ZvFBFieldXRdBool(U, ID, Member, Flags) \
+  ZvFBField_ReadOnly_(U, Bool, ID, \
+      ZvFieldXRdBool(U, ID, Member, Flags))
+#define ZvFBFieldXRdBoolFn(U, ID, Get, Flags) \
+  ZvFBField_ReadOnly_(U, Bool, ID, \
+      ZvFieldXRdBoolFn(U, ID, Get, Flags))
 
-#define ZvFBField_Fixed_(U, Type, Fn, ID, Flags, Exponent) \
-  struct ZvFBField_Name_(U, Type, ID) : \
-      public ZvField##Type##Fn(U, ID, Flags, Exponent) { \
-    using Base = ZvField##Type##Fn(U, ID, Flags, Exponent); \
+#define ZvFBFieldBool(U, Member, Flags) \
+  ZvFBFieldXBool(U, Member, Member, Flags)
+#define ZvFBFieldBoolFn(U, Fn, Flags) \
+  ZvFBFieldXBoolFn(U, Fn, Fn, Fn, Flags)
+
+#define ZvFBFieldRdBool(U, Member, Flags) \
+  ZvFBFieldXRdBool(U, Member, Member, Flags)
+#define ZvFBFieldRdBoolFn(U, Fn, Flags) \
+  ZvFBFieldXRdBoolFn(U, Fn, Fn, Flags)
+
+#define ZvFBFieldXInt(U, ID, Member, Flags) \
+  ZvFBField_Int_(U, Int, ID, ZvFieldXInt(U, ID, Member, Flags))
+#define ZvFBFieldXIntFn(U, ID, Get, Set, Flags) \
+  ZvFBField_Int_(U, Int, ID, ZvFieldXIntFn(U, ID, Get, Set, Flags))
+
+#define ZvFBFieldXRdInt(U, ID, Member, Flags) \
+  ZvFBField_ReadOnly_(U, Int, ID, \
+      ZvFieldXRdInt(U, ID, Member, Flags))
+#define ZvFBFieldXRdIntFn(U, ID, Get, Flags) \
+  ZvFBField_ReadOnly_(U, Int, ID, \
+      ZvFieldXRdIntFn(U, ID, Get, Flags))
+
+#define ZvFBFieldInt(U, Member, Flags) \
+  ZvFBFieldXInt(U, Member, Member, Flags)
+#define ZvFBFieldIntFn(U, Fn, Flags) \
+  ZvFBFieldXIntFn(U, Fn, Fn, Fn, Flags)
+
+#define ZvFBFieldRdInt(U, Member, Flags) \
+  ZvFBFieldXRdInt(U, Member, Member, Flags)
+#define ZvFBFieldRdIntFn(U, Fn, Flags) \
+  ZvFBFieldXRdIntFn(U, Fn, Fn, Flags)
+
+#define ZvFBField_Fixed_(U, Type, ID, Base_) \
+  struct ZvFBField_Name_(U, Type, ID) : public Base_ { \
+    using Base = Base_; \
     using T = typename Base::T; \
     using FBB = ZvFBB<U>; \
     using FBS = ZvFBS<U>; \
@@ -164,28 +218,57 @@ using ZvFBS = ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>;
     static void load(void *o, const FBS *o_) { Base::set(o, load_(o_)); } \
   };
 
-#define ZvFBFieldFloat(U, ID, Flags, Exponent) \
-  ZvFBField_Fixed_(U, Float,, ID, Flags, Exponent)
-#define ZvFBFieldFloatFn(U, ID, Flags, Exponent) \
-  ZvFBField_Fixed_(U, Float, Fn, ID, Flags, Exponent)
-#define ZvFBFieldFixed(U, ID, Flags, Exponent) \
-  ZvFBField_Fixed_(U, Fixed,, ID, Flags, Exponent)
-#define ZvFBFieldFixedFn(U, ID, Flags, Exponent) \
-  ZvFBField_Fixed_(U, Fixed, Fn, ID, Flags, Exponent)
+#define ZvFBFieldXFloat(U, ID, Member, Flags, Exponent) \
+  ZvFBField_Fixed_(U, Float, ID, \
+      ZvFieldXFloat(U, ID, Member, Flags, Exponent))
+#define ZvFBFieldXFloatFn(U, ID, Get, Set, Flags, Exponent) \
+  ZvFBField_Fixed_(U, Float, ID, \
+      ZvFieldXFloatFn(U, ID, Get, Set, Flags, Exponent))
 
-#define ZvFBFieldRdFloat(U, ID, Flags, Exponent) \
-  ZvFBField_ReadOnly_(U, Float,, ID, Flags, Exponent)
-#define ZvFBFieldRdFloatFn(U, ID, Flags, Exponent) \
-  ZvFBField_ReadOnly_(U, Float, Fn, ID, Flags, Exponent)
-#define ZvFBFieldRdFixed(U, ID, Flags, Exponent) \
-  ZvFBField_ReadOnly_(U, Fixed,, ID, Flags, Exponent)
-#define ZvFBFieldRdFixedFn(U, ID, Flags, Exponent) \
-  ZvFBField_ReadOnly_(U, Fixed, Fn, ID, Flags, Exponent)
+#define ZvFBFieldXRdFloat(U, ID, Member, Flags, Exponent) \
+  ZvFBField_ReadOnly_(U, Float, ID, \
+      ZvFieldXRdFloat(U, ID, Member, Flags, Exponent))
+#define ZvFBFieldXRdFloatFn(U, ID, Get, Flags, Exponent) \
+  ZvFBField_ReadOnly_(U, Float, ID, \
+      ZvFieldXRdFloatFn(U, ID, Get, Flags, Exponent))
 
-#define ZvFBField_Decimal_(U, Fn, ID, Flags, Exponent) \
-  struct ZvFBField_Name_(U, Decimal, ID) : \
-      public ZvFieldDecimal##Fn(U, ID, Flags, Exponent) { \
-    using Base = ZvFieldDecimal##Fn(U, ID, Flags, Exponent); \
+#define ZvFBFieldFloat(U, Member, Flags, Exponent) \
+  ZvFBFieldXFloat(U, Member, Member, Flags, Exponent)
+#define ZvFBFieldFloatFn(U, Fn, Flags, Exponent) \
+  ZvFBFieldXFloatFn(U, Fn, Fn, Fn, Flags, Exponent)
+
+#define ZvFBFieldRdFloat(U, Member, Flags, Exponent) \
+  ZvFBFieldXRdFloat(U, Member, Member, Flags, Exponent)
+#define ZvFBFieldRdFloatFn(U, Fn, Flags, Exponent) \
+  ZvFBFieldXRdFloatFn(U, Fn, Fn, Flags, Exponent)
+
+#define ZvFBFieldXFixed(U, ID, Member, Flags, Exponent) \
+  ZvFBField_Fixed_(U, Fixed, ID, \
+      ZvFieldXFixed(U, ID, Member, Flags, Exponent))
+#define ZvFBFieldXFixedFn(U, ID, Get, Set, Flags, Exponent) \
+  ZvFBField_Fixed_(U, Fixed, ID, \
+      ZvFieldXFixedFn(U, ID, Get, Set, Flags, Exponent))
+
+#define ZvFBFieldXRdFixed(U, ID, Member, Flags, Exponent) \
+  ZvFBField_ReadOnly_(U, Fixed, ID, \
+      ZvFieldXRdFixed(U, ID, Member, Flags, Exponent))
+#define ZvFBFieldXRdFixedFn(U, ID, Get, Flags, Exponent) \
+  ZvFBField_ReadOnly_(U, Fixed, ID, \
+      ZvFieldXRdFixedFn(U, ID, Get, Flags, Exponent))
+
+#define ZvFBFieldFixed(U, Member, Flags, Exponent) \
+  ZvFBFieldXFixed(U, Member, Member, Flags, Exponent)
+#define ZvFBFieldFixedFn(U, Fn, Flags, Exponent) \
+  ZvFBFieldXFixedFn(U, Fn, Fn, Fn, Flags, Exponent)
+
+#define ZvFBFieldRdFixed(U, Member, Flags, Exponent) \
+  ZvFBFieldXRdFixed(U, Member, Member, Flags, Exponent)
+#define ZvFBFieldRdFixedFn(U, Fn, Flags, Exponent) \
+  ZvFBFieldXRdFixedFn(U, Fn, Fn, Flags, Exponent)
+
+#define ZvFBField_Decimal_(U, ID, Base_) \
+  struct ZvFBField_Name_(U, Decimal, ID) : public Base_ { \
+    using Base = Base_; \
     using FBB = ZvFBB<U>; \
     using FBS = ZvFBS<U>; \
     enum { Inline = 1 }; \
@@ -201,30 +284,55 @@ using ZvFBS = ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>;
     static void load(void *o, const FBS *o_) { Base::set(o, load_(o_)); } \
   };
 
-#define ZvFBFieldDecimal(U, ID, Flags, Exponent) \
-  ZvFBField_Decimal_(U,, ID, Flags, Exponent)
-#define ZvFBFieldDecimalFn(U, ID, Flags, Exponent) \
-  ZvFBField_Decimal_(U, Fn, ID, Flags, Exponent)
+#define ZvFBFieldXDecimal(U, ID, Member, Flags, Exponent) \
+  ZvFBField_Decimal_(U, ID, \
+      ZvFieldXDecimal(U, ID, Member, Flags, Exponent))
+#define ZvFBFieldXDecimalFn(U, ID, Get, Set, Flags, Exponent) \
+  ZvFBField_Decimal_(U, ID, \
+      ZvFieldXDecimalFn(U, ID, Get, Set, Flags, Exponent))
 
-#define ZvFBFieldRdDecimal(U, ID, Flags, Exponent) \
-  ZvFBField_ReadOnly_(U, Decimal,, ID, Flags, Exponent)
-#define ZvFBFieldRdDecimalFn(U, ID, Flags, Exponent) \
-  ZvFBField_ReadOnly_(U, Decimal, Fn, ID, Flags, Exponent)
+#define ZvFBFieldXRdDecimal(U, ID, Member, Flags, Exponent) \
+  ZvFBField_ReadOnly_(U, Decimal, ID, \
+      ZvFieldXRdDecimal(U, ID, Member, Flags, Exponent))
+#define ZvFBFieldXRdDecimalFn(U, ID, Get, Flags, Exponent) \
+  ZvFBField_ReadOnly_(U, Decimal, ID, \
+      ZvFieldXRdDecimalFn(U, ID, Get, Flags, Exponent))
 
-#define ZvFBFieldHex(U, ID, Flags) \
-  ZvFBField_Int_(U, Hex,, ID, Flags)
-#define ZvFBFieldHexFn(U, ID, Flags) \
-  ZvFBField_Int_(U, Hex, Fn, ID, Flags)
+#define ZvFBFieldDecimal(U, Member, Flags, Exponent) \
+  ZvFBFieldXDecimal(U, Member, Member, Flags, Exponent)
+#define ZvFBFieldDecimalFn(U, Fn, Flags, Exponent) \
+  ZvFBFieldXDecimalFn(U, Fn, Fn, Fn, Flags, Exponent)
 
-#define ZvFBFieldRdHex(U, ID, Flags) \
-  ZvFBField_ReadOnly_(U, Hex,, ID, Flags)
-#define ZvFBFieldRdHexFn(U, ID, Flags) \
-  ZvFBField_ReadOnly_(U, Hex, Fn, ID, Flags)
+#define ZvFBFieldRdDecimal(U, Member, Flags, Exponent) \
+  ZvFBFieldXRdDecimal(U, Member, Member, Flags, Exponent)
+#define ZvFBFieldRdDecimalFn(U, Fn, Flags, Exponent) \
+  ZvFBFieldXRdDecimalFn(U, Fn, Fn, Flags, Exponent)
 
-#define ZvFBField_Enum_(U, Fn, ID, Flags, Map) \
-  struct ZvFBField_Name_(U, Type, ID) : \
-      public ZvFieldEnum##Fn(U, ID, Flags, Map) { \
-    using Base = ZvFieldEnum##Fn(U, ID, Flags, Map); \
+#define ZvFBFieldXHex(U, ID, Member, Flags) \
+  ZvFBField_Int_(U, Hex, ID, ZvFieldXHex(U, ID, Member, Flags))
+#define ZvFBFieldXHexFn(U, ID, Get, Set, Flags) \
+  ZvFBField_Int_(U, Hex, ID, ZvFieldXHexFn(U, ID, Get, Set, Flags))
+
+#define ZvFBFieldXRdHex(U, ID, Member, Flags) \
+  ZvFBField_ReadOnly_(U, Hex, ID, \
+      ZvFieldXRdHex(U, ID, Member, Flags))
+#define ZvFBFieldXRdHexFn(U, ID, Get, Flags) \
+  ZvFBField_ReadOnly_(U, Hex, ID, \
+      ZvFieldXRdHexFn(U, ID, Get, Flags))
+
+#define ZvFBFieldHex(U, Member, Flags) \
+  ZvFBFieldXHex(U, Member, Member, Flags)
+#define ZvFBFieldHexFn(U, Fn, Flags) \
+  ZvFBFieldXHexFn(U, Fn, Fn, Fn, Flags)
+
+#define ZvFBFieldRdHex(U, Member, Flags) \
+  ZvFBFieldXRdHex(U, Member, Member, Flags)
+#define ZvFBFieldRdHexFn(U, Fn, Flags) \
+  ZvFBFieldXRdHexFn(U, Fn, Fn, Flags)
+
+#define ZvFBField_Enum_(U, ID, Base_, Map) \
+  struct ZvFBField_Name_(U, Enum, ID) : Base_ { \
+    using Base = Base_; \
     using T = typename Base::T; \
     using FBB = ZvFBB<U>; \
     using FBS = ZvFBS<U>; \
@@ -236,20 +344,33 @@ using ZvFBS = ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>;
     static void load(void *o, const FBS *o_) { Base::set(o, load_(o_)); } \
   };
 
-#define ZvFBFieldEnum(U, ID, Flags, Map) \
-  ZvFBField_Enum_(U,, ID, Flags, Map)
-#define ZvFBFieldEnumFn(U, ID, Flags, Map) \
-  ZvFBField_Enum_(U, Fn, ID, Flags, Map)
+#define ZvFBFieldXEnum(U, ID, Member, Flags, Map) \
+  ZvFBField_Enum_(U, ID, \
+      ZvFieldXEnum(U, ID, Member, Flags, Map), Map)
+#define ZvFBFieldXEnumFn(U, ID, Get, Set, Flags, Map) \
+  ZvFBField_Enum_(U, ID, \
+      ZvFieldXEnumFn(U, ID, Get, Set, Flags, Map), Map)
 
-#define ZvFBFieldRdEnum(U, ID, Flags, Map) \
-  ZvFBField_ReadOnly_(U, Enum,, ID, Flags, Map)
-#define ZvFBFieldRdEnumFn(U, ID, Flags, Map) \
-  ZvFBField_ReadOnly_(U, Enum, Fn, ID, Flags, Map)
+#define ZvFBFieldXRdEnum(U, ID, Member, Flags, Map) \
+  ZvFBField_ReadOnly_(U, Enum, ID, \
+      ZvFieldXRdEnum(U, ID, Member, Flags, Map))
+#define ZvFBFieldXRdEnumFn(U, ID, Get, Flags, Map) \
+  ZvFBField_ReadOnly_(U, Enum, ID, \
+      ZvFieldXRdEnumFn(U, ID, Get, Flags, Map))
 
-#define ZvFBField_Flags_(U, Fn, ID, Flags, Map) \
-  struct ZvFBField_Name_(U, Type, ID) : \
-      public ZvFieldFlags##Fn(U, ID, Flags, Map) { \
-    using Base = ZvFieldFlags##Fn(U, ID, Flags, Map); \
+#define ZvFBFieldEnum(U, Member, Flags, Map) \
+  ZvFBFieldXEnum(U, Member, Member, Flags, Map)
+#define ZvFBFieldEnumFn(U, Fn, Flags, Map) \
+  ZvFBFieldXEnumFn(U, Fn, Fn, Fn, Flags, Map)
+
+#define ZvFBFieldRdEnum(U, Member, Flags, Map) \
+  ZvFBFieldXRdEnum(U, Member, Member, Flags, Map)
+#define ZvFBFieldRdEnumFn(U, Fn, Flags, Map) \
+  ZvFBFieldXRdEnumFn(U, Fn, Fn, Flags, Map)
+
+#define ZvFBField_Flags_(U, ID, Base_) \
+  struct ZvFBField_Name_(U, Flags, ID) : public Base_ { \
+    using Base = Base_; \
     using T = typename Base::T; \
     using FBB = ZvFBB<U>; \
     using FBS = ZvFBS<U>; \
@@ -259,20 +380,33 @@ using ZvFBS = ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>;
     static void load(void *o, const FBS *o_) { Base::set(o, load_(o_)); } \
   };
 
-#define ZvFBFieldFlags(U, ID, Flags) \
-  ZvFBField_Flags_(U,, ID, Flags)
-#define ZvFBFieldFlagsFn(U, ID, Flags) \
-  ZvFBField_Flags_(U, Fn, ID, Flags)
+#define ZvFBFieldXFlags(U, ID, Member, Flags, Map) \
+  ZvFBField_Flags_(U, ID, \
+      ZvFieldXFlags(U, ID, Member, Flags, Map))
+#define ZvFBFieldXFlagsFn(U, ID, Get, Set, Flags, Map) \
+  ZvFBField_Flags_(U, ID, \
+      ZvFieldXFlagsFn(U, ID, Get, Set, Flags, Map))
 
-#define ZvFBFieldRdFlags(U, ID, Flags) \
-  ZvFBField_ReadOnly_(U, Flags,, ID, Flags)
-#define ZvFBFieldRdFlagsFn(U, ID, Flags) \
-  ZvFBField_ReadOnly_(U, Flags, Fn, ID, Flags)
+#define ZvFBFieldXRdFlags(U, ID, Member, Flags_, Map) \
+  ZvFBField_ReadOnly_(U, Flags, ID, \
+      ZvFieldXRdFlags(U, ID, Member, Flags_, Map))
+#define ZvFBFieldXRdFlagsFn(U, ID, Get, Flags_, Map) \
+  ZvFBField_ReadOnly_(U, Flags, ID, \
+      ZvFieldXRdFlagsFn(U, ID, Get, Flags_, Map))
 
-#define ZvFBField_Time_(U, Fn, ID, Flags) \
-  struct ZvFBField_Name_(U, Type, ID) : \
-      public ZvFieldTime##Fn(U, ID, Flags) { \
-    using Base = ZvFieldTime##Fn(U, ID, Flags); \
+#define ZvFBFieldFlags(U, Member, Flags, Map) \
+  ZvFBFieldXFlags(U, Member, Member, Flags, Map)
+#define ZvFBFieldFlagsFn(U, Fn, Flags, Map) \
+  ZvFBFieldXFlagsFn(U, Fn, Fn, Fn, Flags, Map)
+
+#define ZvFBFieldRdFlags(U, Member, Flags, Map) \
+  ZvFBFieldXRdFlags(U, Member, Member, Flags, Map)
+#define ZvFBFieldRdFlagsFn(U, Fn, Flags, Map) \
+  ZvFBFieldXRdFlagsFn(U, Fn, Fn, Flags, Map)
+
+#define ZvFBField_Time_(U, ID, Base_) \
+  struct ZvFBField_Name_(U, Time, ID) : public Base_ { \
+    using Base = Base_; \
     using FBB = ZvFBB<U>; \
     using FBS = ZvFBS<U>; \
     enum { Inline = 1 }; \
@@ -290,15 +424,29 @@ using ZvFBS = ZuDecay<decltype(*ZvFBS_(ZuDeclVal<T *>()))>;
     } \
   };
 
-#define ZvFBFieldTime(U, ID, Flags) \
-  ZvFBField_Time_(U,, ID, Flags)
-#define ZvFBFieldTimeFn(U, ID, Flags) \
-  ZvFBField_Time_(U, Fn, ID, Flags)
+#define ZvFBFieldXTime(U, ID, Member, Flags) \
+  ZvFBField_Time_(U, ID, \
+      ZvFieldXTime(U, ID, Member, Flags))
+#define ZvFBFieldXTimeFn(U, ID, Get, Set, Flags) \
+  ZvFBField_Time_(U, ID, \
+      ZvFieldXTimeFn(U, ID, Get, Set, Flags))
 
-#define ZvFBFieldRdTime(U, ID, Flags) \
-  ZvFBField_ReadOnly_(U, Time,, ID, Flags)
-#define ZvFBFieldRdTimeFn(U, ID, Flags) \
-  ZvFBField_ReadOnly_(U, Time, Fn, ID, Flags)
+#define ZvFBFieldXRdTime(U, ID, Member, Flags) \
+  ZvFBField_ReadOnly_(U, Time, ID, \
+      ZvFieldXRdTime(U, ID, Member, Flags))
+#define ZvFBFieldXRdTimeFn(U, ID, Get, Flags) \
+  ZvFBField_ReadOnly_(U, Time, ID, \
+      ZvFieldXRdTimeFn(U, ID, Get, Flags))
+
+#define ZvFBFieldTime(U, Member, Flags) \
+  ZvFBFieldXTime(U, Member, Member, Flags)
+#define ZvFBFieldTimeFn(U, Fn, Flags) \
+  ZvFBFieldXTimeFn(U, Fn, Fn, Fn, Flags)
+
+#define ZvFBFieldRdTime(U, Member, Flags) \
+  ZvFBFieldXRdTime(U, Member, Member, Flags)
+#define ZvFBFieldRdTimeFn(U, Fn, Flags) \
+  ZvFBFieldXRdTimeFn(U, Fn, Fn, Flags)
 
 #define ZvFBField_Decl_(U, Type, ...) ZvFBField##Type(U, __VA_ARGS__)
 #define ZvFBField_Decl(U, Args) \

@@ -133,7 +133,7 @@ struct String_ : public RdString_<Base, Flags> {
 #define ZvFieldXRdString(U, ID, Member, Flags_) \
   ZvField::RdString_<ZuFieldXRdData(U, ID, Member), \
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly)>
-#define ZvFieldXRdStringFn(U, ID, Get, Set, Flags_) \
+#define ZvFieldXRdStringFn(U, ID, Get, Flags_) \
   ZvField::RdString_<ZuFieldXRdFn(U, ID, Get), \
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly)>
 
@@ -145,7 +145,7 @@ struct String_ : public RdString_<Base, Flags> {
 #define ZvFieldRdString(U, Member, Flags) \
   ZvFieldXRdString(U, Member, Member, Flags)
 #define ZvFieldRdStringFn(U, Fn, Flags) \
-  ZvFieldXRdStringFn(U, Fn, Fn, Fn, Flags)
+  ZvFieldXRdStringFn(U, Fn, Fn, Flags)
 
 #define ZvFieldString(U, Member, Flags) \
   ZvFieldXString(U, Member, Member, Flags)
@@ -169,7 +169,7 @@ struct Composite_ : public RdComposite_<Base, Flags> {
 #define ZvFieldXRdComposite(U, ID, Member, Flags_) \
   ZvField::RdComposite_<ZuFieldXRdData(U, ID, Member), \
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly)>
-#define ZvFieldXRdCompositeFn(U, ID, Get, Set, Flags_) \
+#define ZvFieldXRdCompositeFn(U, ID, Get, Flags_) \
   ZvField::RdComposite_<ZuFieldXRdFn(U, ID, Get), \
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly)>
 
@@ -181,7 +181,7 @@ struct Composite_ : public RdComposite_<Base, Flags> {
 #define ZvFieldRdComposite(U, Member, Flags) \
   ZvFieldXRdComposite(U, Member, Member, Flags)
 #define ZvFieldRdCompositeFn(U, Fn, Flags) \
-  ZvFieldXRdCompositeFn(U, Fn, Fn, Fn, Flags)
+  ZvFieldXRdCompositeFn(U, Fn, Fn, Flags)
 
 #define ZvFieldComposite(U, Member, Flags) \
   ZvFieldXComposite(U, Member, Member, Flags)
@@ -205,7 +205,7 @@ struct Bool_ : public RdBool_<Base, Flags> {
 #define ZvFieldXRdBool(U, ID, Member, Flags_) \
   ZvField::RdBool_<ZuFieldXRdData(U, ID, Member), \
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly)>
-#define ZvFieldXRdBoolFn(U, ID, Get, Set, Flags_) \
+#define ZvFieldXRdBoolFn(U, ID, Get, Flags_) \
   ZvField::RdBool_<ZuFieldXRdFn(U, ID, Get), \
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly)>
 
@@ -217,7 +217,7 @@ struct Bool_ : public RdBool_<Base, Flags> {
 #define ZvFieldRdBool(U, Member, Flags) \
   ZvFieldXRdBool(U, Member, Member, Flags)
 #define ZvFieldRdBoolFn(U, Fn, Flags) \
-  ZvFieldXRdBoolFn(U, Fn, Fn, Fn, Flags)
+  ZvFieldXRdBoolFn(U, Fn, Fn, Flags)
 
 #define ZvFieldBool(U, Member, Flags) \
   ZvFieldXBool(U, Member, Member, Flags)
@@ -242,7 +242,7 @@ struct Int_ : public RdInt_<Base, Flags> {
 #define ZvFieldXRdInt(U, ID, Member, Flags_) \
   ZvField::RdInt_<ZuFieldXRdData(U, ID, Member),\
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly)>
-#define ZvFieldXRdIntFn(U, ID, Get, Set, Flags_) \
+#define ZvFieldXRdIntFn(U, ID, Get, Flags_) \
   ZvField::RdInt_<ZuFieldXRdFn(U, ID, Get), \
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly)>
 
@@ -254,7 +254,7 @@ struct Int_ : public RdInt_<Base, Flags> {
 #define ZvFieldRdInt(U, Member, Flags) \
   ZvFieldXRdInt(U, Member, Member, Flags)
 #define ZvFieldRdIntFn(U, Fn, Flags) \
-  ZvFieldXRdIntFn(U, Fn, Fn, Fn, Flags)
+  ZvFieldXRdIntFn(U, Fn, Fn, Flags)
 
 #define ZvFieldInt(U, Member, Flags) \
   ZvFieldXInt(U, Member, Member, Flags)
@@ -280,7 +280,7 @@ struct Float_ : public RdFloat_<Base, Flags, Exponent> {
 #define ZvFieldXRdFloat(U, ID, Member, Flags_, Exponent) \
   ZvField::RdFloat_<ZuFieldXRdData(U, ID, Member), \
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly), Exponent>
-#define ZvFieldXRdFloatFn(U, ID, Get, Set, Flags_, Exponent) \
+#define ZvFieldXRdFloatFn(U, ID, Get, Flags_, Exponent) \
   ZvField::RdFloat_<ZuFieldXRdFn(U, ID, Get), \
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly), Exponent>
 
@@ -292,7 +292,7 @@ struct Float_ : public RdFloat_<Base, Flags, Exponent> {
 #define ZvFieldRdFloat(U, Member, Flags, Exponent) \
   ZvFieldXRdFloat(U, Member, Member, Flags, Exponent)
 #define ZvFieldRdFloatFn(U, Fn, Flags, Exponent) \
-  ZvFieldXRdFloatFn(U, Fn, Fn, Fn, Flags, Exponent)
+  ZvFieldXRdFloatFn(U, Fn, Fn, Flags, Exponent)
 
 #define ZvFieldFloat(U, Member, Flags, Exponent) \
   ZvFieldXFloat(U, Member, Member, Flags, Exponent)
@@ -317,7 +317,7 @@ struct Fixed_ : public RdFixed_<Base, Flags, Exponent> {
 #define ZvFieldXRdFixed(U, ID, Member, Flags_, Exponent) \
   ZvField::RdFixed_<ZuFieldXRdData(U, ID, Member), \
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly), Exponent>
-#define ZvFieldXRdFixedFn(U, ID, Get, Set, Flags_, Exponent) \
+#define ZvFieldXRdFixedFn(U, ID, Get, Flags_, Exponent) \
   ZvField::RdFixed_<ZuFieldXRdFn(U, ID, Get), \
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly), Exponent>
 
@@ -329,7 +329,7 @@ struct Fixed_ : public RdFixed_<Base, Flags, Exponent> {
 #define ZvFieldRdFixed(U, Member, Flags, Exponent) \
   ZvFieldXRdFixed(U, Member, Member, Flags, Exponent)
 #define ZvFieldRdFixedFn(U, Fn, Flags, Exponent) \
-  ZvFieldXRdFixedFn(U, Fn, Fn, Fn, Flags, Exponent)
+  ZvFieldXRdFixedFn(U, Fn, Fn, Flags, Exponent)
 
 #define ZvFieldFixed(U, Member, Flags, Exponent) \
   ZvFieldXFixed(U, Member, Member, Flags, Exponent)
@@ -354,7 +354,7 @@ struct Decimal_ : public RdDecimal_<Base, Flags, Exponent> {
 #define ZvFieldXRdDecimal(U, ID, Member, Flags_, Exponent) \
   ZvField::RdDecimal_<ZuFieldXRdData(U, ID, Member), \
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly), Exponent>
-#define ZvFieldXRdDecimalFn(U, ID, Get, Set, Flags_, Exponent) \
+#define ZvFieldXRdDecimalFn(U, ID, Get, Flags_, Exponent) \
   ZvField::RdDecimal_<ZuFieldXRdFn(U, ID, Get), \
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly), Exponent>
 
@@ -368,7 +368,7 @@ struct Decimal_ : public RdDecimal_<Base, Flags, Exponent> {
 #define ZvFieldRdDecimal(U, Member, Flags, Exponent) \
   ZvFieldXRdDecimal(U, Member, Member, Flags, Exponent)
 #define ZvFieldRdDecimalFn(U, Fn, Flags, Exponent) \
-  ZvFieldXRdDecimalFn(U, Fn, Fn, Fn, Flags, Exponent)
+  ZvFieldXRdDecimalFn(U, Fn, Fn, Flags, Exponent)
 
 #define ZvFieldDecimal(U, Member, Flags, Exponent) \
   ZvFieldXDecimal(U, Member, Member, Flags, Exponent)
@@ -393,7 +393,7 @@ struct Hex_ : public RdHex_<Base, Flags> {
 #define ZvFieldXRdHex(U, ID, Member, Flags_) \
   ZvField::RdHex_<ZuFieldXRdData(U, ID, Member), \
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly)>
-#define ZvFieldXRdHexFn(U, ID, Get, Set, Flags_) \
+#define ZvFieldXRdHexFn(U, ID, Get, Flags_) \
   ZvField::RdHex_<ZuFieldXRdFn(U, ID, Get), \
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly)>
 
@@ -405,7 +405,7 @@ struct Hex_ : public RdHex_<Base, Flags> {
 #define ZvFieldRdHex(U, Member, Flags) \
   ZvFieldXRdHex(U, Member, Member, Flags)
 #define ZvFieldRdHexFn(U, Fn, Flags) \
-  ZvFieldXRdHexFn(U, Fn, Fn, Fn, Flags)
+  ZvFieldXRdHexFn(U, Fn, Fn, Flags)
 
 #define ZvFieldHex(U, Member, Flags) \
   ZvFieldXHex(U, Member, Member, Flags)
@@ -430,7 +430,7 @@ struct Enum_ : public RdEnum_<Base, Flags, Map> {
 #define ZvFieldXRdEnum(U, ID, Member, Flags_, Map) \
   ZvField::RdEnum_<ZuFieldXRdData(U, ID, Member), \
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly), Map>
-#define ZvFieldXRdEnumFn(U, ID, Get, Set, Flags_, Map) \
+#define ZvFieldXRdEnumFn(U, ID, Get, Flags_, Map) \
   ZvField::RdEnum_<ZuFieldXRdFn(U, ID, Get), \
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly), Map>
 
@@ -442,7 +442,7 @@ struct Enum_ : public RdEnum_<Base, Flags, Map> {
 #define ZvFieldRdEnum(U, Member, Flags, Map) \
   ZvFieldXRdEnum(U, Member, Member, Flags, Map)
 #define ZvFieldRdEnumFn(U, Fn, Flags, Map) \
-  ZvFieldXRdEnumFn(U, Fn, Fn, Fn, Flags, Map)
+  ZvFieldXRdEnumFn(U, Fn, Fn, Flags, Map)
 
 #define ZvFieldEnum(U, Member, Flags, Map) \
   ZvFieldXEnum(U, Member, Member, Flags, Map)
@@ -468,7 +468,7 @@ struct Flags_ : public RdFlags_<Base, Flags, Map> {
 #define ZvFieldXRdFlags(U, ID, Member, Flags_, Map) \
   ZvField::RdFlags_<ZuFieldXRdData(U, ID, Member), \
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly), Map>
-#define ZvFieldXRdFlagsFn(U, ID, Get, Set, Flags_, Map) \
+#define ZvFieldXRdFlagsFn(U, ID, Get, Flags_, Map) \
   ZvField::RdFlags_<ZuFieldXRdFn(U, ID, Get), \
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly), Map>
 
@@ -480,7 +480,7 @@ struct Flags_ : public RdFlags_<Base, Flags, Map> {
 #define ZvFieldRdFlags(U, Member, Flags, Map) \
   ZvFieldXRdFlags(U, Member, Member, Flags, Map)
 #define ZvFieldRdFlagsFn(U, Fn, Flags, Map) \
-  ZvFieldXRdFlagsFn(U, Fn, Fn, Fn, Flags, Map)
+  ZvFieldXRdFlagsFn(U, Fn, Fn, Flags, Map)
 
 #define ZvFieldFlags(U, Member, Flags, Map) \
   ZvFieldXFlags(U, Member, Member, Flags, Map)
@@ -527,7 +527,7 @@ struct Time_ : public RdTime_<Base, Flags> {
 #define ZvFieldXRdTime(U, ID, Member, Flags_) \
   ZvField::RdTime_<ZuFieldXRdData(U, ID, Member), \
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly)>
-#define ZvFieldXRdTimeFn(U, ID, Get, Set, Flags_) \
+#define ZvFieldXRdTimeFn(U, ID, Get, Flags_) \
   ZvField::RdTime_<ZuFieldXRdFn(U, ID, Get), \
     (ZvFieldMkFlags(Flags_) | ZvField::Flags::ReadOnly)>
 
@@ -539,7 +539,7 @@ struct Time_ : public RdTime_<Base, Flags> {
 #define ZvFieldRdTime(U, Member, Flags) \
   ZvFieldXRdTime(U, Member, Member, Flags)
 #define ZvFieldRdTimeFn(U, Fn, Flags) \
-  ZvFieldXRdTimeFn(U, Fn, Fn, Fn, Flags)
+  ZvFieldXRdTimeFn(U, Fn, Fn, Flags)
 
 #define ZvFieldTime(U, Member, Flags) \
   ZvFieldXTime(U, Member, Member, Flags)

@@ -319,10 +319,13 @@ template <typename T> ZuTypeList<> ZvFBFieldList_(T *); // default
   U##_Fields ZvFBFieldList_(U *); \
   U##_Fields ZvFieldList_(U *)
 
-template <typename T>
-using ZvFBFieldList = decltype(ZvFBFieldList_(ZuDeclVal<T *>()));
-
 namespace ZvFB {
+
+namespace Type = ZvField::Type;
+namespace Flags = ZvField::Flags;
+
+template <typename T>
+using List = decltype(ZvFBFieldList_(ZuDeclVal<T *>()));
 
 namespace Save {
 
@@ -330,8 +333,8 @@ template <typename T> using Offset = Zfb::Offset<T>;
 
 template <typename Field> struct HasOffset {
   enum { OK =
-    Field::Type == ZvFieldType::String ||
-    (Field::Type == ZvFieldType::Composite && !Field::Inline)
+    Field::Type == Type::String ||
+    (Field::Type == Type::Composite && !Field::Inline)
   };
 };
 template <
@@ -377,30 +380,30 @@ template <typename T>
 struct Table_ {
   using FBB = ZvFBB<T>;
   using FBS = ZvFBS<T>;
-  using FieldList = ZvFBFieldList<T>;
+  using FieldList = List<T>;
 
   template <typename U>
-  struct AllFilter { enum { OK = !(U::Flags & ZvFieldFlags::ReadOnly) }; };
+  struct AllFilter { enum { OK = !(U::Flags & Flags::ReadOnly) }; };
   using AllFields = ZuTypeGrep<AllFilter, FieldList>;
 
   template <typename U>
   struct UpdatedFilter { enum {
-    OK = U::Flags & (ZvFieldFlags::Primary | ZvFieldFlags::Update) }; };
+    OK = U::Flags & (Flags::Primary | Flags::Update) }; };
   using UpdatedFields = ZuTypeGrep<UpdatedFilter, AllFields>;
 
   template <typename U>
-  struct CtorFilter { enum { OK = U::Flags & ZvFieldFlags::Ctor_ }; };
+  struct CtorFilter { enum { OK = U::Flags & Flags::Ctor_ }; };
   using CtorFields_ = ZuTypeGrep<CtorFilter, AllFields>;
   template <typename U>
-  struct CtorIndex { enum { I = ZvFieldFlags::CtorIndex(U::Flags) }; };
+  struct CtorIndex { enum { I = Flags::CtorIndex(U::Flags) }; };
   using CtorFields = ZuTypeSort<CtorIndex, CtorFields_>;
 
   template <typename U>
-  struct InitFilter { enum { OK = !(U::Flags & ZvFieldFlags::Ctor_) }; };
+  struct InitFilter { enum { OK = !(U::Flags & Flags::Ctor_) }; };
   using InitFields = ZuTypeGrep<InitFilter, AllFields>;
 
   template <typename U>
-  struct KeyFilter { enum { OK = U::Flags & ZvFieldFlags::Primary }; };
+  struct KeyFilter { enum { OK = U::Flags & Flags::Primary }; };
   using KeyFields = ZuTypeGrep<KeyFilter, AllFields>;
 
   static Zfb::Offset<FBS> save(Zfb::Builder &fbb, const void *o) {
@@ -447,7 +450,7 @@ struct Table_ {
   }
 };
 template <typename T>
-using Table = Table_<ZvFielded<T>>;
+using Table = Table_<ZvField::Fielded<T>>;
 
 template <typename T>
 inline auto save(Zfb::Builder &fbb, const T &o) {

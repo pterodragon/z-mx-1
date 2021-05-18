@@ -82,10 +82,10 @@ namespace Telemetry {
   struct Watch {
     void	*ptr_ = nullptr;
 
-    template <typename T> ZuInline const T *ptr() const {
+    template <typename T> const T *ptr() const {
       return static_cast<const T *>(ptr_);
     }
-    template <typename T> ZuInline T *ptr() {
+    template <typename T> T *ptr() {
       return static_cast<T *>(ptr_);
     }
   };
@@ -116,14 +116,12 @@ namespace Telemetry {
   using Graph = GraphList::Node;
 
   using TypeList = ZvTelemetry::TypeList;
-
-  template <typename T_> struct FBSType { using T = typename T_::FBS; };
-  using FBSTypeList =ZuTypeMap<FBSType, TypeList>;
+  using FBSTypeList = ZuTypeMap<ZvFBS, TypeList>;
 
   template <typename Data> struct Item__ {
-    using TelKey = typename Data::Key;
-    ZuInline static TelKey telKey(const Data &data) { return data.key(); }
-    ZuInline static int rag(const Data &data) { return data.rag(); }
+    using TelKey = decltype(ZvField::key(ZuDeclVal<const Data &>()));
+    static TelKey telKey(const Data &data) { return ZvField::key(data); }
+    static int rag(const Data &data) { return data.rag(); }
   };
   template <> struct Item__<ZvTelemetry::App> {
     using TelKey = ZuTuple<const ZtString &>;
@@ -133,29 +131,29 @@ namespace Telemetry {
     TelKey telKey(const ZvTelemetry::App &) const {
       return TelKey{telKey_};
     }
-    ZuInline static int rag(const ZvTelemetry::App &data) {
-      return data.rag();
+    static int rag(const ZvTelemetry::App &data) {
+      return data.rag;
     }
     ZtString	telKey_;
   };
   template <> struct Item__<ZvTelemetry::DBEnv> {
     using TelKey = ZuTuple<const char *>;
-    ZuInline static TelKey telKey(const ZvTelemetry::DBEnv &) {
+    static TelKey telKey(const ZvTelemetry::DBEnv &) {
       return TelKey{"dbenv"};
     }
-    ZuInline static int rag(const ZvTelemetry::DBEnv &) {
+    static int rag(const ZvTelemetry::DBEnv &) {
       return ZvTelemetry::RAG::Off;
     }
   };
   template <typename Data_> class Item_ : public Item__<Data_> {
   public:
     using Data = Data_;
-    using Load = ZvTelemetry::load<Data>;
+    using Load = ZvFB::Load<Data>;
     using TelKey = typename Item__<Data_>::TelKey;
 
-    ZuInline Item_(void *link__) : link_{link__} { }
+    Item_(void *link__) : link_{link__} { }
     template <typename FBS>
-    ZuInline Item_(void *link__, FBS *fbs) : link_{link__}, data{fbs} { }
+    Item_(void *link__, FBS *fbs) : link_{link__}, data{fbs} { }
 
   private:
     Item_(const Item_ &) = delete;
@@ -172,15 +170,15 @@ namespace Telemetry {
     }
 
     template <typename Link>
-    ZuInline Link *link() const { return static_cast<Link *>(link_); }
+    Link *link() const { return static_cast<Link *>(link_); }
 
     template <typename T>
-    ZuInline T *gtkRow() const { return static_cast<T *>(gtkRow_); }
+    T *gtkRow() const { return static_cast<T *>(gtkRow_); }
     template <typename T>
-    ZuInline void gtkRow(T *node) { gtkRow_ = node; }
+    void gtkRow(T *node) { gtkRow_ = node; }
 
-    ZuInline TelKey telKey() const { return Item__<Data_>::telKey(data); }
-    ZuInline int rag() const { return Item__<Data_>::rag(data); }
+    TelKey telKey() const { return Item__<Data_>::telKey(data); }
+    int rag() const { return Item__<Data_>::rag(data); }
 
     bool record(ZuString name, Zdf::Mgr *mgr, ZeError *e = nullptr) {
       dataFrame = new Zdf::DataFrame{Data::fields(), name, true};
@@ -223,7 +221,7 @@ namespace Telemetry {
     using Node = typename ItemTree_<T>::Node;
     template <typename FBS>
     Node *lookup(const FBS *fbs) const {
-      return this->find(T::key(fbs));
+      return this->find(ZvFB::key<T>(fbs));
     }
   };
   template <typename T> class ItemSingleton {
@@ -254,23 +252,25 @@ namespace Telemetry {
     ZtArray<T>	data;
   };
 
-  template <typename T_> struct Container { // default
-    using T = ItemTree<T_>;
+  template <typename U> struct Container_ { // default
+    using T = ItemTree<U>;
   };
-  template <> struct Container<ZvTelemetry::App> {
+  template <> struct Container_<ZvTelemetry::App> {
     using T = ItemSingleton<ZvTelemetry::App>;
   };
-  template <> struct Container<ZvTelemetry::DBEnv> {
+  template <> struct Container_<ZvTelemetry::DBEnv> {
     using T = ItemSingleton<ZvTelemetry::DBEnv>;
   };
-  template <> struct Container<ZvTelemetry::Alert> {
+  template <> struct Container_<ZvTelemetry::Alert> {
     using T = AlertArray;
   };
+  template <typename U>
+  using Container = typename Container_<U>::T;
 
-  using ContainerList =ZuTypeMap<Container, TypeList>;
-  using Containers =ZuTypeApply<ZuTuple, ContainerList>;
+  using ContainerList = ZuTypeMap<Container, TypeList>;
+  using Containers = ZuTypeApply<ZuTuple, ContainerList>;
 
-  template <typename T> using Item = typename Container<T>::T::Node;
+  template <typename T> using Item = typename Container<T>::Node;
 }
 
 namespace GtkTree {
@@ -288,9 +288,9 @@ namespace GtkTree {
     void init_() { item->gtkRow(impl()); }
 
     using TelKey = typename Item::TelKey;
-    ZuInline TelKey telKey() const { return item->telKey(); }
-    ZuInline int rag() const { return item->rag(); }
-    ZuInline int cmp(const Impl &v) const {
+    TelKey telKey() const { return item->telKey(); }
+    int rag() const { return item->rag(); }
+    int cmp(const Impl &v) const {
       return item->telKey().cmp(v.telKey());
     }
   };
@@ -880,6 +880,7 @@ class App :
     public ZGtk::App {
 public:
   using Client = ZvCmdClient<App_Cli, CliLink_>;
+  using FBB = typename Client::FBB;
   using Server = ZvCmdServer<App_Srv, SrvLink>;
   using User = Server::User;
 
@@ -1111,15 +1112,15 @@ public:
     data.version = ZuVerName();
     data.uptime = m_uptime;
     data.role = m_role;
-    data.rag(RAG::Green);
+    data.rag = RAG::Green;
   }
 
   template <typename ...Args>
-  ZuInline void gtkRun(Args &&... args) {
+  void gtkRun(Args &&... args) {
     ZGtk::App::run(ZuFwd<Args>(args)...);
   }
   template <typename ...Args>
-  ZuInline void gtkInvoke(Args &&... args) {
+  void gtkInvoke(Args &&... args) {
     ZGtk::App::invoke(ZuFwd<Args>(args)...);
   }
 
@@ -1398,7 +1399,7 @@ private:
     using Item = TelItem<T>;
     Item *item;
     if (item = container.lookup(fbs)) {
-      item->data.loadDelta(fbs);
+      ZvFB::loadUpdate(item->data, fbs);
       m_gtkModel->updated(GtkTree::row(item));
     } else {
       item = new Item{cliLink, fbs};
@@ -1467,7 +1468,7 @@ private:
   void addGtkRow(CliLink_ *cliLink, TelItem<ZvTelemetry::Socket> *item) {
     ZuConstant<ZuTypeIndex<ZvTelemetry::Mx, ZvTelemetry::TypeList>::I> i;
     auto &mxContainer = cliLink->telemetry.p<i>();
-    auto mxItem = mxContainer.find(ZvTelemetry::Mx::Key{item->data.mxID});
+    auto mxItem = mxContainer.find(ZuFwdTuple(item->data.mxID));
     if (!mxItem) {
       auto mxItem = new TelItem<ZvTelemetry::Mx>{cliLink};
       mxItem->data.id = item->data.mxID;
@@ -1492,7 +1493,7 @@ private:
     ZuConstant<ZuTypeIndex<ZvTelemetry::Engine, ZvTelemetry::TypeList>::I> i;
     auto &engContainer = cliLink->telemetry.p<i>();
     auto engItem =
-      engContainer.find(ZvTelemetry::Engine::Key{item->data.engineID});
+      engContainer.find(ZuFwdTuple(item->data.engineID));
     if (!engItem) {
       auto engItem = new TelItem<ZvTelemetry::Mx>{cliLink};
       engItem->data.id = item->data.engineID;
@@ -1533,11 +1534,11 @@ private:
     ZuConstant<ZuTypeIndex<FBS, Telemetry::FBSTypeList>::I> i;
     using T = ZuType<i, Telemetry::TypeList>;
     auto &container = cliLink->telemetry.p<i>();
-    alert(new (container.data.push()) ZvTelemetry::load<T>{fbs});
+    processAlert(new (container.data.push()) ZvFB::Load<T>{fbs});
     return true;
   }
 
-  void alert(const ZvTelemetry::Alert *) {
+  void processAlert(const ZvTelemetry::Alert *) {
     // FIXME - update alerts in UX
   }
 
@@ -1556,7 +1557,7 @@ private:
   };
   int			m_cmdPerms[CmdPerm::N];
   ZuID			m_id = "zdash";
-  Zfb::IOBuilder	m_fbb;
+  FBB			m_fbb;
 
   int			m_role;	// ZvTelemetry::AppRole
   ZtDate		m_uptime;

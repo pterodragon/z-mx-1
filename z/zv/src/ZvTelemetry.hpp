@@ -165,7 +165,7 @@ namespace Severity {
 template <typename> struct load;
 
 using Heap_ = ZmHeapTelemetry;
-struct Heap : public Heap_, public ZvFieldPrint<Heap> {
+struct Heap : public Heap_, public ZvField::Print<Heap> {
   Heap() = default;
   template <typename ...Args>
   Heap(Args &&... args) : Heap_{ZuFwd<Args>(args)...} { }
@@ -196,7 +196,7 @@ ZvFBFields(Heap,
     (RdEnumFn, rag, (Series), RAG::Map));
 
 using HashTbl_ = ZmHashTelemetry;
-struct HashTbl : public HashTbl_, public ZvFieldPrint<HashTbl> {
+struct HashTbl : public HashTbl_, public ZvField::Print<HashTbl> {
   HashTbl() = default;
   template <typename ...Args>
   HashTbl(Args &&... args) : HashTbl_{ZuFwd<Args>(args)...} { }
@@ -222,7 +222,7 @@ ZvFBFields(HashTbl,
     (RdEnumFn, rag, (Series), RAG::Map));
 
 using Thread_ = ZmThreadTelemetry;
-struct Thread : public Thread_, public ZvFieldPrint<Thread> {
+struct Thread : public Thread_, public ZvField::Print<Thread> {
   Thread() = default;
   template <typename ...Args>
   Thread(Args &&... args) : Thread_{ZuFwd<Args>(args)...} { }
@@ -249,7 +249,7 @@ ZvFBFields(Thread,
     (RdEnumFn, rag, (Series), RAG::Map));
 
 using Mx_ = ZiMxTelemetry;
-struct Mx : public Mx_, public ZvFieldPrint<Mx> {
+struct Mx : public Mx_, public ZvField::Print<Mx> {
   Mx() = default;
   template <typename ...Args>
   Mx(Args &&... args) : Mx_{ZuFwd<Args>(args)...} { }
@@ -275,7 +275,7 @@ ZvFBFields(Mx,
     (RdEnumFn, rag, (Series), RAG::Map));
 
 using Socket_ = ZiCxnTelemetry;
-struct Socket : public Socket_, public ZvFieldPrint<Socket> {
+struct Socket : public Socket_, public ZvField::Print<Socket> {
   Socket() = default;
   template <typename ...Args>
   Socket(Args &&... args) : Socket_{ZuFwd<Args>(args)...} { }
@@ -323,7 +323,7 @@ struct Queue_ {
   uint32_t	full = 0;	// dynamic - how many times queue overflowed
   int8_t	type = -1;	// primary key - QueueType
 };
-struct Queue : public Queue_, public ZvFieldPrint<Queue> {
+struct Queue : public Queue_, public ZvField::Print<Queue> {
   Queue() = default;
   template <typename ...Args>
   Queue(Args &&... args) : Queue_{ZuFwd<Args>(args)...} { }
@@ -360,7 +360,7 @@ struct Link_ {
   uint32_t	reconnects = 0;
   int8_t	state = 0;
 };
-struct Link : public Link_, public ZvFieldPrint<Link> {
+struct Link : public Link_, public ZvField::Print<Link> {
   Link() = default;
   template <typename ...Args>
   Link(Args &&... args) : Link_{ZuFwd<Args>(args)...} { }
@@ -392,7 +392,7 @@ struct Engine_ {
   uint16_t	txThread = 0;
   int8_t	state = -1;
 };
-struct Engine : public Engine_, public ZvFieldPrint<Engine> {
+struct Engine : public Engine_, public ZvField::Print<Engine> {
   Engine() = default;
   template <typename ...Args>
   Engine(Args &&... args) : Engine_{ZuFwd<Args>(args)...} { }
@@ -444,7 +444,7 @@ struct DB_ {
   uint8_t	compress = 0;
   int8_t	cacheMode = -1;	// ZdbCacheMode
 };
-struct DB : public DB_, public ZvFieldPrint<DB> {
+struct DB : public DB_, public ZvField::Print<DB> {
   DB() = default;
   template <typename ...Args>
   DB(Args &&... args) : DB_{ZuFwd<Args>(args)...} { }
@@ -489,7 +489,7 @@ struct DBHost_ {
   int8_t	state = 0;// RAG: Instantiated - Red; Active - Green; * - Amber
   uint8_t	voted = 0;
 };
-struct DBHost : public DBHost_, public ZvFieldPrint<DBHost> {
+struct DBHost : public DBHost_, public ZvField::Print<DBHost> {
   DBHost() = default;
   template <typename ...Args>
   DBHost(Args &&... args) : DBHost_{ZuFwd<Args>(args)...} { }
@@ -530,7 +530,7 @@ struct DBEnv_ {
   uint8_t	recovering = 0;
   uint8_t	replicating = 0;
 };
-struct DBEnv : public DBEnv_, public ZvFieldPrint<DBEnv> {
+struct DBEnv : public DBEnv_, public ZvField::Print<DBEnv> {
   DBEnv() = default;
   template <typename ...Args>
   DBEnv(Args &&... args) : DBEnv_{ZuFwd<Args>(args)...} { }
@@ -567,7 +567,7 @@ struct App_ {
   int8_t	role = -1;
   int8_t	rag = -1;
 };
-struct App : public App_, public ZvFieldPrint<App> {
+struct App : public App_, public ZvField::Print<App> {
   App() = default;
   template <typename ...Args>
   App(Args &&... args) : App_{ZuFwd<Args>(args)...} { }
@@ -588,7 +588,7 @@ struct Alert_ {
   int8_t	severity = -1;
   ZtString	message;
 };
-struct Alert : public Alert_, public ZvFieldPrint<Alert> {
+struct Alert : public Alert_, public ZvField::Print<Alert> {
   Alert() = default;
   template <typename ...Args>
   Alert(Args &&... args) : Alert_{ZuFwd<Args>(args)...} { }

@@ -32,7 +32,6 @@
 #pragma once
 #endif
 
-#include <zlib/ZuIf.hpp>
 #include <zlib/ZuNull.hpp>
 
 template <typename ...Args> struct ZuLargest_;
@@ -40,8 +39,8 @@ template <typename Arg0> struct ZuLargest_<Arg0> {
   using T = Arg0;
 };
 template <typename Arg0, typename ...Args> struct ZuLargest_<Arg0, Args...> {
-  using T = ZuIf<Arg0, typename ZuLargest_<Args...>::T,
-	(sizeof(Arg0) > sizeof(typename ZuLargest_<Args...>::T))>;
+  using T = ZuIf<(sizeof(Arg0) > sizeof(typename ZuLargest_<Args...>::T)),
+    Arg0, typename ZuLargest_<Args...>::T>;
 };
 template <typename ...Args> using ZuLargest = ZuLargest_<Args...>;
 

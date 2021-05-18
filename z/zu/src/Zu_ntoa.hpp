@@ -78,7 +78,6 @@
 #include <string.h>
 
 #include <zlib/ZuInt.hpp>
-#include <zlib/ZuIfT.hpp>
 #include <zlib/ZuFP.hpp>
 #include <zlib/ZuFmt.hpp>
 #include <zlib/ZuDecimalFn.hpp>

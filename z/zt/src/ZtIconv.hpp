@@ -34,8 +34,6 @@
 
 #include <iconv.h>
 
-#include <zlib/ZuIf.hpp>
-
 #include <zlib/ZmLock.hpp>
 
 // specialize ZtIconvFn for any output buffer type
@@ -68,7 +66,7 @@ class ZtIconv {
   public:
     enum { Const = sizeof(test(&iconv)) == sizeof(Small) };
   };
-  using InBuf = ZuIf<const char **, char **, IconvTraits::Const>;
+  using InBuf = ZuIf<IconvTraits::Const, const char **, char **>;
 
 public:
   ZtIconv(const char *tocode, const char *fromcode) :

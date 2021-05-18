@@ -34,7 +34,6 @@
 #include <zlib/ZuCmp.hpp>
 #include <zlib/ZuHash.hpp>
 #include <zlib/ZuIndex.hpp>
-#include <zlib/ZuIf.hpp>
 #include <zlib/ZuConversion.hpp>
 
 #include <zlib/ZmAtomic.hpp>
@@ -361,11 +360,12 @@ public:
   struct NullObject { }; // deconflict with ZuNull
   template <typename Node, typename Heap,
     bool NodeIsKey, bool NodeIsVal> class NodeFn :
-      public ZuIf<NullObject, Object,
+      public ZuIf<
 	ZuConversion<ZuNull, Object>::Is ||
 	ZuConversion<ZuShadow, Object>::Is ||
 	(NodeIsKey && ZuConversion<Object, Key>::Is) ||
-	(NodeIsVal && ZuConversion<Object, Val>::Is)>,
+	(NodeIsVal && ZuConversion<Object, Val>::Is),
+	NullObject, Object>,
       public Heap {
     NodeFn(const NodeFn &);
     NodeFn &operator =(const NodeFn &);	// prevent mis-use

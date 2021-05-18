@@ -51,7 +51,6 @@
 #pragma once
 #endif
 
-#include <zlib/ZuIfT.hpp>
 #include <zlib/ZuTraits.hpp>
 #include <zlib/ZuLargest.hpp>
 #include <zlib/ZuNull.hpp>

@@ -30,7 +30,6 @@
 #pragma once
 #endif
 
-// #include <ZuIfT.hpp>
 // template <unsigned I> ZuIfT<I == 0> foo() { puts("0"); }
 // template <unsigned I> ZuIfT<I == 1> foo() { puts("1"); }
 // template <unsigned I> ZuIfT<I == 2> foo() { puts("2"); }

@@ -30,7 +30,6 @@
 #include <zlib/ZmLib.hpp>
 #endif
 
-#include <zlib/ZuIf.hpp>
 #include <zlib/ZuNull.hpp>
 #include <zlib/ZuCmp.hpp>
 #include <zlib/ZuConversion.hpp>
@@ -152,10 +151,11 @@ public:
 
   struct NullObject { }; // deconflict with ZuNull
   template <typename Node, typename Heap, bool NodeIsItem> class NodeFn :
-      public ZuIf<NullObject, Object,
+      public ZuIf<
 	ZuConversion<ZuNull, Object>::Is ||
 	ZuConversion<ZuShadow, Object>::Is ||
-	(NodeIsItem && ZuConversion<Object, Item>::Is)>,
+	(NodeIsItem && ZuConversion<Object, Item>::Is),
+	NullObject, Object>,
       public Heap {
     NodeFn(const NodeFn &);
     NodeFn &operator =(const NodeFn &);	// prevent mis-use

@@ -63,7 +63,7 @@ private:
   struct MatchOtherPtr_;
   template <typename U, typename R>
   struct MatchOtherPtr_<U, R, true> : public MatchOtherPtr__<U, R> { };
-  template <typename U, typename R>
+  template <typename U, typename R = void>
   using MatchOtherPtr = typename MatchOtherPtr_<U, R>::T;
 
   // matches ZuPtr<U> where U is either T or in the same type hierarchy as T
@@ -77,13 +77,13 @@ private:
   template <typename U, typename R>
   struct MatchZuPtr__<U, R, true> { using T = R; };
   template <typename U> struct IsZuPtr_ {
-    enum { OK = ZuConversion<ZuPtr__, U>::Base };
+    enum { OK = ZuConversion<ZuPtr_, U>::Base };
   };
   template <typename U, typename = void, bool = IsZuPtr_<U>::OK>
   struct MatchZuPtr_;
   template <typename U, typename R>
   struct MatchZuPtr_<U, R, true> : public MatchZuPtr__<U, R> { };
-  template <typename U, typename R>
+  template <typename U, typename R = void>
   using MatchZuPtr = typename MatchZuPtr_<U, R>::T;
 
   // matches U * where U is either T or in the same type hierarchy as T
@@ -101,7 +101,7 @@ public:
   template <typename R>
   ZuPtr(R &&r, MatchOtherPtr<ZuDeref<R>> *_ = 0)
   noexcept : m_object(
-      static_cast<T *>(const_cast<ZuDeref<R>::T *>(r.m_object))) {
+      static_cast<T *>(const_cast<typename ZuDeref<R>::T *>(r.m_object))) {
     ZuMvCp<R>::mv(ZuFwd<R>(r), [](auto &&r) { r.m_object = nullptr; });
   }
   ZuPtr(T *o) : m_object(o) { }

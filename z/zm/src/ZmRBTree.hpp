@@ -30,7 +30,6 @@
 #include <zlib/ZmLib.hpp>
 #endif
 
-#include <zlib/ZuIf.hpp>
 #include <zlib/ZuNull.hpp>
 #include <zlib/ZuCmp.hpp>
 #include <zlib/ZuIndex.hpp>
@@ -333,13 +332,14 @@ private:
   template <
     typename Node, typename Heap, bool NodeIsKey, bool NodeIsVal, bool Unique>
   class NodeFn_ :
-      public ZuIf<NullObject, Object,
+      public ZuIf<
 	ZuConversion<ZuNull, Object>::Is ||
 	(NodeIsKey && ZuConversion<Object, Key>::Is) ||
-	(NodeIsVal && ZuConversion<Object, Val>::Is)>,
-      public ZuIf<NodeFn_Unique<Node>, NodeFn_Dup<Node>, Unique>,
+	(NodeIsVal && ZuConversion<Object, Val>::Is),
+	NullObject, Object>,
+      public ZuIf<Unique, NodeFn_Unique<Node>, NodeFn_Dup<Node>>,
       public Heap {
-    using Base = ZuIf<NodeFn_Unique<Node>, NodeFn_Dup<Node>, Unique>;
+    using Base = ZuIf<Unique, NodeFn_Unique<Node>, NodeFn_Dup<Node>>;
 
   public:
     NodeFn_() { }

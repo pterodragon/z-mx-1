@@ -35,7 +35,6 @@
 #include <float.h>
 
 #include <zlib/ZuAssert.hpp>
-#include <zlib/ZuIfT.hpp>
 #include <zlib/ZuTraits.hpp>
 #include <zlib/ZuCmp.hpp>
 #include <zlib/ZuHash.hpp>

@@ -156,7 +156,7 @@ public:
       > *_ = 0) :
     m_p0(ZuFwd<T>(v)) { }
 
-  template <typename T> ZuInline
+  template <typename T>
   ZuIfT<ZuTuple1_Cvt<ZuDecay<T>, Tuple>::OK, Tuple &>
   operator =(T &&v) {
     m_p0 = Bind<ZuDecay<T>>::p0(ZuFwd<T>(v));
@@ -164,13 +164,12 @@ public:
   }
 
   template <typename T>
-  ZuInline
   ZuIfT<
     !ZuTuple1_Cvt<ZuDecay<T>, Tuple>::OK &&
     (!ZuTraits<T0>::IsReference ||
       ZuConversion<ZuDecay<U0>, ZuDecay<T>>::Is),
-    Tuple &
-  > operator =(T &&v) {
+    Tuple &>
+  operator =(T &&v) {
     m_p0 = ZuFwd<T>(v);
     return *this;
   }
@@ -250,7 +249,10 @@ public:
   }
 
   // traits
-  friend ZuTraits<T0> ZuTraitsType(Tuple *);
+  struct Traits : public ZuBaseTraits<Tuple> {
+    enum { IsPOD = ZuTraits<T0>::IsPOD };
+  };
+  friend Traits ZuTraitsType(Tuple *);
 
 private:
   T0		m_p0;
@@ -389,7 +391,6 @@ public:
   }
 
   template <unsigned I>
-  ZuInline
   ZuIfT<(I && I < N), const Type<I> &> p() const {
     return Base::template p<1>().template p<I - 1>();
   }

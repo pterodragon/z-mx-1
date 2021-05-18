@@ -396,8 +396,6 @@ template <> struct ZuTraits<void> : public ZuBaseTraits<void> {
   enum { IsPrimitive = 1, IsPOD = 1, IsVoid = 1 };
 };
 
-#include <zlib/ZuIfT.hpp>
-
 // SFINAE techniques...
 #define ZuTraits_SFINAE(Trait) \
 template <typename U, typename R = void> \

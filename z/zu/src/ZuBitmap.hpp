@@ -34,7 +34,6 @@
 #include <zlib/ZuString.hpp>
 #include <zlib/ZuBox.hpp>
 #include <zlib/ZuPrint.hpp>
-#include <zlib/ZuIfT.hpp>
 
 template <unsigned Bits_> class ZuBitmap : public ZuPrintable {
 public:

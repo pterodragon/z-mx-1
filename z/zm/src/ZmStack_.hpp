@@ -40,7 +40,6 @@
 #include <zlib/ZuCmp.hpp>
 #include <zlib/ZuIndex.hpp>
 #include <zlib/ZuConversion.hpp>
-#include <zlib/ZuIfT.hpp>
 
 #include <zlib/ZmAssert.hpp>
 #include <zlib/ZmGuard.hpp>

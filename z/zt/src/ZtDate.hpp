@@ -105,7 +105,6 @@
 #include <time.h>
 #include <limits.h>
 
-#include <zlib/ZuIfT.hpp>
 #include <zlib/ZuTraits.hpp>
 #include <zlib/ZuString.hpp>
 #include <zlib/ZuConversion.hpp>

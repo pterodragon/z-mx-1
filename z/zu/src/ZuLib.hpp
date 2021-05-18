@@ -243,6 +243,26 @@ template <typename T_> struct ZuMvCp {
   static void cp(T &&v, Cp); // undefined
 };
 
+// compile-time ?:
+// ZuIf<bool B, typename T1, typename T2> evaluates to B ? T1 : T2
+template <typename T1, typename T2, bool B> struct ZuIf_;
+template <typename T1, typename T2> struct ZuIf_<T1, T2, true> {
+  using T = T1;
+};
+template <typename T1, typename T2> struct ZuIf_<T1, T2, false> {
+  using T = T2;
+};
+template <bool B, typename T1, typename T2>
+using ZuIf = typename ZuIf_<T1, T2, B>::T;
+
+// compile-time SFINAE (substitution failure is not an error)
+// ZuIfT<bool B, typename T = void> evaluates to T (default void)
+// if B is true, or is a substitution failure if B is false
+template <bool, typename U = void> struct ZuIfT_ { };
+template <typename U> struct ZuIfT_<true, U> { using T = U; };
+template <bool B, typename U = void>
+using ZuIfT = typename ZuIfT_<B, U>::T;
+
 // type list
 template <typename ...Args> struct ZuTypeList {
   enum { N = sizeof...(Args) };
@@ -315,11 +335,10 @@ template <template <typename> class Map, typename ...Args>
 using ZuTypeMap = typename ZuTypeMap_<Map, Args...>::T;
 
 // grep
-template <typename, bool> struct ZuTypeGrep__;
-template <typename T0> struct ZuTypeGrep__<T0, true> {
+template <typename T0, int> struct ZuTypeGrep__ {
   using T = ZuTypeList<T0>;
 };
-template <typename T0> struct ZuTypeGrep__<T0, false> {
+template <typename T0> struct ZuTypeGrep__<T0, 0> {
   using T = ZuTypeList<>;
 };
 template <template <typename> class, typename ...>

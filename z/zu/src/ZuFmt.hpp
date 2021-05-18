@@ -30,8 +30,6 @@
 #pragma once
 #endif
 
-#include <zlib/ZuIf.hpp>
-
 // compile-time formatting
 namespace ZuFmt {
   enum { MaxWidth = 54 };

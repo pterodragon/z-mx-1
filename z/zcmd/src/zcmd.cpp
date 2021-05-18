@@ -98,6 +98,7 @@ public:
   template <typename Data_>
   static TelCap keyedFn(ZtString path) {
     using Data = ZvFB::Load<Data_>;
+    using FBS = ZvFBS<Data>;
     using Key = decltype(ZvFieldKey(ZuDeclVal<const Data &>()));
     struct Accessor : public ZuAccessor<Data, ZuDecay<Key>> {
       static Key value(const Data &data) { return ZvFieldKey(data); }
@@ -117,7 +118,6 @@ public:
 	tree->clean();
 	return;
       }
-      using FBS = ZvFBS<Data>;
       auto fbs = static_cast<const FBS *>(fbs_);
       auto node = tree->find(ZvFB::key<Data>(fbs));
       if (!node)
@@ -128,27 +128,30 @@ public:
     }};
   }
 
-  template <typename Data>
+  template <typename Data_>
   static TelCap singletonFn(ZtString path) {
+    using Data = ZvFB::Load<Data_>;
+    using FBS = ZvFBS<Data>;
     return TelCap{[
 	l = ZvCSV<Data>{}.writeFile(path)](const void *fbs_) mutable {
       if (!fbs_) {
 	l(nullptr);
 	return;
       }
-      using FBS = ZvFBS<Data>;
       auto fbs = static_cast<const FBS *>(fbs_);
       static Data *data = nullptr;
       if (!data)
 	data = new Data{fbs};
       else
-	ZvFB::loadUpdate(data, fbs);
+	ZvFB::loadUpdate(*data, fbs);
       l(data);
     }};
   }
 
-  template <typename Data, typename FBS>
+  template <typename Data_>
   static TelCap alertFn(ZtString path) {
+    using Data = ZvFB::Load<Data_>;
+    using FBS = ZvFBS<Data>;
     return TelCap{[
 	l = ZvCSV<Data>{}.writeFile(path)](const void *fbs_) mutable {
       if (!fbs_) {
@@ -1366,7 +1369,7 @@ private:
 	      break;
 	    case ReqType::DBEnv:
 	      m_telcap[TelData::DBEnv - TelData::MIN] =
-		TelCap::singletonFn<load<DBEnv>, fbs::DBEnv>(
+		TelCap::singletonFn<DBEnv>(
 		    ZiFile::append(dir, "dbenv.csv"));
 	      m_telcap[TelData::DBHost - TelData::MIN] =
 		TelCap::keyedFn<DBHost>(
@@ -1377,12 +1380,12 @@ private:
 	      break;
 	    case ReqType::App:
 	      m_telcap[TelData::App - TelData::MIN] =
-		TelCap::singletonFn<load<ZvTelemetry::App>, fbs::App>(
+		TelCap::singletonFn<ZvTelemetry::App>(
 		    ZiFile::append(dir, "app.csv"));
 	      break;
 	    case ReqType::Alert:
 	      m_telcap[TelData::Alert - TelData::MIN] =
-		TelCap::alertFn<load<Alert>, fbs::Alert>(
+		TelCap::alertFn<Alert>(
 		    ZiFile::append(dir, "alert.csv"));
 	      break;
 	  }

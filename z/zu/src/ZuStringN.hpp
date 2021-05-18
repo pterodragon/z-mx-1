@@ -43,7 +43,6 @@
 
 #include <zlib/ZuTraits.hpp>
 #include <zlib/ZuConversion.hpp>
-#include <zlib/ZuIfT.hpp>
 #include <zlib/ZuStringFn.hpp>
 #include <zlib/ZuString.hpp>
 #include <zlib/ZuPrint.hpp>

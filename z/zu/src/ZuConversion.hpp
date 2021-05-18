@@ -39,8 +39,6 @@
 #pragma once
 #endif
 
-#include <zlib/ZuIfT.hpp>
-
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable:4244 4800)

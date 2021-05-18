@@ -47,7 +47,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-#include <zlib/ZuIfT.hpp>
 #include <zlib/ZuInt.hpp>
 #include <zlib/ZuNull.hpp>
 #include <zlib/ZuTraits.hpp>

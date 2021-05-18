@@ -78,7 +78,6 @@
 #include <zlib/ZuCmp.hpp>
 #include <zlib/ZuConversion.hpp>
 #include <zlib/ZuPair.hpp>
-#include <zlib/ZuIfT.hpp>
 #include <zlib/ZuLambdaFn.hpp>
 
 #include <zlib/ZmRef.hpp>

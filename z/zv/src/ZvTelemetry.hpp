@@ -311,7 +311,7 @@ ZvFBFields(Socket,
 // display sequence:
 //   id, type, size, full, count, seqNo,
 //   inCount, inBytes, outCount, outBytes
-struct Queue : public ZvFieldPrint<Queue> {
+struct Queue_ {
   ZuID		id;		// primary key - same as Link id for Rx/Tx
   uint64_t	seqNo = 0;	// 0 for Thread, IPC
   uint64_t	count = 0;	// dynamic - may not equal in - out
@@ -322,6 +322,11 @@ struct Queue : public ZvFieldPrint<Queue> {
   uint32_t	size = 0;	// 0 for Rx, Tx
   uint32_t	full = 0;	// dynamic - how many times queue overflowed
   int8_t	type = -1;	// primary key - QueueType
+};
+struct Queue : public Queue_, public ZvFieldPrint<Queue> {
+  Queue() = default;
+  template <typename ...Args>
+  Queue(Args &&... args) : Queue_{ZuFwd<Args>(args)...} { }
 
   // RAG for queues - count > 50% size - amber; 80% - red
   int rag() const {
@@ -347,13 +352,18 @@ ZvFBFields(Queue,
 
 // display sequence:
 //   id, state, reconnects, rxSeqNo, txSeqNo
-struct Link : public ZvFieldPrint<Link> {
+struct Link_ {
   ZuID		id;
   ZuID		engineID;
   uint64_t	rxSeqNo = 0;
   uint64_t	txSeqNo = 0;
   uint32_t	reconnects = 0;
   int8_t	state = 0;
+};
+struct Link : public Link_, public ZvFieldPrint<Link> {
+  Link() = default;
+  template <typename ...Args>
+  Link(Args &&... args) : Link_{ZuFwd<Args>(args)...} { }
 
   int rag() const { return LinkState::rag(state); }
   void rag(int) { } // unused
@@ -367,7 +377,7 @@ ZvFBFields(Link,
     (Int, txSeqNo, (Ctor(3), Update, Series, Delta)),
     (RdEnumFn, rag, (Series), RAG::Map));
 
-struct Engine : public ZvFieldPrint<Engine> {
+struct Engine_ {
   ZuID		id;		// primary key
   ZuID		type;
   ZuID		mxID;
@@ -381,6 +391,11 @@ struct Engine : public ZvFieldPrint<Engine> {
   uint16_t	rxThread = 0;
   uint16_t	txThread = 0;
   int8_t	state = -1;
+};
+struct Engine : public Engine_, public ZvFieldPrint<Engine> {
+  Engine() = default;
+  template <typename ...Args>
+  Engine(Args &&... args) : Engine_{ZuFwd<Args>(args)...} { }
 
   int rag() const { return EngineState::rag(state); }
   void rag(int) { } // unused
@@ -406,7 +421,7 @@ ZvFBFields(Engine,
 //   path, fileSize, fileRecs, filesMax, preAlloc,
 //   minRN, nextRN, fileRN,
 //   cacheLoads, cacheMisses, fileLoads, fileMisses
-struct DB : public ZvFieldPrint<DB> {
+struct DB_ {
   using Path = ZuStringN<124>;
   using Name = ZuStringN<28>;
 
@@ -428,6 +443,11 @@ struct DB : public ZvFieldPrint<DB> {
   uint32_t	filesMax = 0;
   uint8_t	compress = 0;
   int8_t	cacheMode = -1;	// ZdbCacheMode
+};
+struct DB : public DB_, public ZvFieldPrint<DB> {
+  DB() = default;
+  template <typename ...Args>
+  DB(Args &&... args) : DB_{ZuFwd<Args>(args)...} { }
 
   int rag() const {
     unsigned total = cacheLoads + cacheMisses;
@@ -461,13 +481,18 @@ ZvFBFields(DB,
 
 // display sequence:
 //   id, priority, state, voted, ip, port
-struct DBHost : public ZvFieldPrint<DBHost> {
+struct DBHost_ {
   ZiIP		ip;
   uint32_t	id = 0;
   uint32_t	priority = 0;
   uint16_t	port = 0;
   int8_t	state = 0;// RAG: Instantiated - Red; Active - Green; * - Amber
   uint8_t	voted = 0;
+};
+struct DBHost : public DBHost_, public ZvFieldPrint<DBHost> {
+  DBHost() = default;
+  template <typename ...Args>
+  DBHost(Args &&... args) : DBHost_{ZuFwd<Args>(args)...} { }
 
   int rag() const { return DBHostState::rag(state); }
   void rag(int) { } // unused
@@ -486,7 +511,7 @@ ZvFBFields(DBHost,
 //   nDBs, nHosts, nPeers, nCxns,
 //   heartbeatFreq, heartbeatTimeout, reconnectFreq, electionTimeout,
 //   writeThread
-struct DBEnv : public ZvFieldPrint<DBEnv> {
+struct DBEnv_ {
   uint32_t	nCxns = 0;
   uint32_t	heartbeatFreq = 0;
   uint32_t	heartbeatTimeout = 0;
@@ -504,6 +529,11 @@ struct DBEnv : public ZvFieldPrint<DBEnv> {
   uint8_t	active = 0;
   uint8_t	recovering = 0;
   uint8_t	replicating = 0;
+};
+struct DBEnv : public DBEnv_, public ZvFieldPrint<DBEnv> {
+  DBEnv() = default;
+  template <typename ...Args>
+  DBEnv(Args &&... args) : DBEnv_{ZuFwd<Args>(args)...} { }
 
   int rag() const { return DBHostState::rag(state); }
   void rag(int) { } // unused
@@ -530,12 +560,17 @@ ZvFBFields(DBEnv,
 
 // display sequence:
 //   id, role, RAG, uptime, version
-struct App : public ZvFieldPrint<App> {
+struct App_ {
   ZmIDString	id;
   ZmIDString	version;
   ZtDate	uptime;
   int8_t	role = -1;
   int8_t	rag = -1;
+};
+struct App : public App_, public ZvFieldPrint<App> {
+  App() = default;
+  template <typename ...Args>
+  App(Args &&... args) : App_{ZuFwd<Args>(args)...} { }
 };
 ZvFBFields(App,
     (String, id, (Ctor(0), Primary)),
@@ -546,12 +581,17 @@ ZvFBFields(App,
 
 // display sequence:
 //   time, severity, tid, message
-struct Alert : public ZvFieldPrint<Alert> {
+struct Alert_ {
   ZtDate	time;
   uint32_t	seqNo = 0;
   uint32_t	tid = 0;
   int8_t	severity = -1;
   ZtString	message;
+};
+struct Alert : public Alert_, public ZvFieldPrint<Alert> {
+  Alert() = default;
+  template <typename ...Args>
+  Alert(Args &&... args) : Alert_{ZuFwd<Args>(args)...} { }
 };
 ZvFBFields(Alert,
     (Time, time, (Ctor(0))),

@@ -1,0 +1,28 @@
+FROM pdockerdevenv_arch as z-mx-resources
+
+USER root
+RUN git clone https://github.com/google/flatbuffers.git
+RUN git clone https://github.com/tplgy/cppcodec
+
+# ----------------------------------------
+FROM pdockerdevenv_arch as main
+USER root
+RUN pacman -S --noconfirm libck hwloc jdk8-openjdk maven make mbedtls
+
+ARG UNAME=testuser
+ARG UID
+ARG GID
+USER $UNAME
+
+RUN mkdir -p /home/$UNAME/Documents/github
+COPY --from=z-mx-resources --chown=$UID:$GID /flatbuffers /home/$UNAME/Documents/github/flatbuffers
+COPY --from=z-mx-resources --chown=$UID:$GID /cppcodec /home/$UNAME/Documents/github/cppcodec
+WORKDIR /home/$UNAME/Documents
+RUN cd /home/$UNAME/Documents/github/flatbuffers && cmake .
+RUN cd /home/$UNAME/Documents/github/flatbuffers && make -j8
+RUN cd /home/$UNAME/Documents/github/cppcodec && git submodule update --init && cmake .
+
+USER root
+RUN cd /home/$UNAME/Documents/github/flatbuffers && make install
+RUN cd /home/$UNAME/Documents/github/cppcodec && make install
+USER $UNAME

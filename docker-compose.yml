@@ -1,0 +1,26 @@
+version: '3'
+
+services:
+  z-mx:
+    image: z-mx-1
+    build:
+      context: ./
+      args:
+        UID: $UID  # export these first when building; UID/GID are shell variables
+        GID: $GID
+        UNAME: $USER
+    user: $UID:$GID
+    container_name: z-mx
+    image: z-mx
+    stdin_open: true
+    tty: true
+    working_dir: /workspace
+    volumes:
+      - $PWD:/workspace
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    network_mode: "host"
+    # ports:
+    #   - "9999:9999"
